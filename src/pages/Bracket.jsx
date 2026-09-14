@@ -10,8 +10,21 @@ export default function Bracket() {
     setE("");
     api
       .get(`/api/torneos/${slug}/bracket/`)
-      .then((r) => setD(r.data))
-      .catch(() => setE("No pudimos cargar la llave."));
+      .then((r) => {
+        if (
+          !Array.isArray(r.data?.rondas) ||
+          !Array.isArray(r.data?.equipos_confirmados) ||
+          !r.data.rondas.every((round) => Array.isArray(round.partidas))
+        ) {
+          throw new TypeError("Los datos de la llave no contienen listas válidas.");
+        }
+        setD(r.data);
+      })
+      .catch((requestError) => {
+        console.error("No pudimos cargar la llave.", requestError);
+        setD(undefined);
+        setE("No pudimos cargar la llave.");
+      });
   }, [slug]);
   useEffect(load, [load]);
   return (

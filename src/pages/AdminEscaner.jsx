@@ -46,7 +46,8 @@ export default function AdminEscaner() {
       setPerson({ ...response.data, codigo });
       controls.current?.stop();
       setCamera(false);
-    } catch {
+    } catch (requestError) {
+      console.error("No pudimos consultar el pase.", requestError);
       setError("No encontramos ese pase. Revisa el código.");
       lock.current = false;
     }
@@ -71,7 +72,8 @@ export default function AdminEscaner() {
         return;
       }
       controls.current = nextControls;
-    } catch {
+    } catch (cameraError) {
+      console.error("No pudimos activar la cámara.", cameraError);
       if (!mounted.current) return;
       deniedRef.current = true;
       setDenied(true);
@@ -88,6 +90,7 @@ export default function AdminEscaner() {
       });
       setFlash({ bad: false, text: `Entrega de ${amount} confirmada` });
     } catch (requestError) {
+      console.error("No pudimos registrar la entrega.", requestError);
       const text = requestError.response
         ? requestError.response.data?.detail
         : "No pudimos registrar la entrega. Revisa la conexión e intenta de nuevo.";

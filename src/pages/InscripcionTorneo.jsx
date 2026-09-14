@@ -20,7 +20,10 @@ export default function InscripcionTorneo() {
         setTournament(data);
         setMembers(emptyMembers(data.jugadores_por_equipo));
       })
-      .catch(() => setErrors({ general: "No pudimos cargar el torneo." }));
+      .catch((requestError) => {
+        console.error("No pudimos cargar el torneo.", requestError);
+        setErrors({ general: "No pudimos cargar el torneo." });
+      });
   }, [slug]);
 
   const individual =
@@ -46,6 +49,7 @@ export default function InscripcionTorneo() {
       });
       setDone(data);
     } catch (error) {
+      console.error("No pudimos completar la inscripción.", error);
       const data = error.response?.data || {};
       const general =
         data.detail || data.non_field_errors?.[0] || "Revisa los datos.";
