@@ -148,6 +148,9 @@ export default function AdminEscaner() {
           <h2>
             {person.nombre} {person.apellido}
           </h2>
+          {person.carrera_nombre && (
+            <p className="person-career">{person.carrera_nombre}</p>
+          )}
           <p
             className={`balance ${person.completos_disponibles === 0 ? "none" : ""}`}
           >

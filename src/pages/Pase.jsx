@@ -73,6 +73,7 @@ export default function Pase() {
         <h1>
           {p.nombre} {p.apellido}
         </h1>
+        {p.carrera_nombre && <p className="person-career">{p.carrera_nombre}</p>}
         <div className="qr" ref={ref}>
           <QRCodeCanvas value={url} size={260} level="M" marginSize={1} />
         </div>
