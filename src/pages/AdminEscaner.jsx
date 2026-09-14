@@ -1,1 +1,154 @@
-import{useEffect,useRef,useState}from'react';import{BrowserQRCodeReader}from'@zxing/browser';import api from'../api';export default function AdminEscaner(){const video=useRef(),controls=useRef(),lock=useRef(false),[cam,setCam]=useState(false),[denied,setDenied]=useState(false),[code,setCode]=useState(''),[person,setPerson]=useState(),[error,setError]=useState(''),[flash,setFlash]=useState();useEffect(()=>()=>controls.current?.stop(),[]);function extract(text){try{return new URL(text).pathname.match(/\/pase\/([^/]+)/)?.[1]||text.trim()}catch{return text.trim()}}async function lookup(raw){if(lock.current)return;lock.current=true;try{const c=extract(raw);const r=await api.get(`/api/admin/asistentes/${c}/`);setPerson({...r.data,codigo:c});controls.current?.stop()}catch{setError('No encontramos ese pase. Revisa el código.');lock.current=false}}async function start(){setDenied(false);setError('');lock.current=false;try{const reader=new BrowserQRCodeReader();controls.current=await reader.decodeFromVideoDevice(undefined,video.current,(result)=>{if(result)lookup(result.getText())});setCam(true)}catch{setDenied(true);setCam(false)}}async function deliver(n){try{await api.post('/api/admin/retiros/',{codigo:person.codigo,cantidad:n});setFlash({bad:false,text:`Entrega de ${n} confirmada`})}catch(e){setFlash({bad:true,text:e.response?.data?.detail||'Ya no hay completos disponibles'})}setTimeout(()=>{setFlash(null);setPerson(null);lock.current=false;start()},3000)}return <main className="scanner"><h1>Escáner de pases</h1>{!cam&&!person&&<button onClick={start}>Activar cámara</button>}<video ref={video}/>{denied&&<div className="notice"><h2>Cámara bloqueada</h2><p>Habilita el permiso de cámara en la configuración del navegador y vuelve a intentarlo. Mientras tanto, usa el código manual.</p></div>}{error&&<p className="error">{error}</p>}<form onSubmit={e=>{e.preventDefault();lookup(code)}}><div className="field"><label htmlFor="manual">Código manual</label><input id="manual" value={code} onChange={e=>setCode(e.target.value)} placeholder="Escribe el código del pase"/></div><button>Buscar pase</button></form>{person&&<section className="scan-result"><h2>{person.nombre} {person.apellido}</h2><p className={`balance ${person.completos_disponibles===0?'none':''}`}>{person.completos_disponibles} disponibles</p><div className="actions"><button disabled={person.completos_disponibles<1} onClick={()=>deliver(1)}>Entregar 1</button><button disabled={person.completos_disponibles<2} onClick={()=>deliver(2)}>Entregar 2</button></div></section>}{flash&&<div className={`overlay ${flash.bad?'bad':''}`} role="status"><h2>{flash.text}</h2></div>}</main>}
+import { useEffect, useRef, useState } from "react";
+import { BrowserQRCodeReader } from "@zxing/browser";
+import api from "../api";
+
+export default function AdminEscaner() {
+  const video = useRef();
+  const controls = useRef();
+  const lock = useRef(false);
+  const [camera, setCamera] = useState(false);
+  const [denied, setDenied] = useState(false);
+  const [code, setCode] = useState("");
+  const [person, setPerson] = useState();
+  const [error, setError] = useState("");
+  const [flash, setFlash] = useState();
+  const [delivering, setDelivering] = useState(false);
+
+  useEffect(() => () => controls.current?.stop(), []);
+  function extract(text) {
+    try {
+      return (
+        new URL(text).pathname.match(/\/pase\/([^/]+)/)?.[1] || text.trim()
+      );
+    } catch {
+      return text.trim();
+    }
+  }
+  async function lookup(raw) {
+    if (lock.current) return;
+    lock.current = true;
+    setError("");
+    try {
+      const codigo = extract(raw);
+      const response = await api.get(`/api/admin/asistentes/${codigo}/`);
+      setPerson({ ...response.data, codigo });
+      controls.current?.stop();
+      setCamera(false);
+    } catch {
+      setError("No encontramos ese pase. Revisa el código.");
+      lock.current = false;
+    }
+  }
+  async function start() {
+    setDenied(false);
+    setError("");
+    lock.current = false;
+    try {
+      setCamera(true);
+      const reader = new BrowserQRCodeReader();
+      controls.current = await reader.decodeFromVideoDevice(
+        undefined,
+        video.current,
+        (result) => {
+          if (result) lookup(result.getText());
+        },
+      );
+    } catch {
+      setDenied(true);
+      setCamera(false);
+    }
+  }
+  async function deliver(amount) {
+    if (delivering || lock.current === false) return;
+    setDelivering(true);
+    try {
+      await api.post("/api/admin/retiros/", {
+        codigo: person.codigo,
+        cantidad: amount,
+      });
+      setFlash({ bad: false, text: `Entrega de ${amount} confirmada` });
+    } catch (requestError) {
+      const text = requestError.response
+        ? requestError.response.data?.detail
+        : "No pudimos registrar la entrega. Revisa la conexión e intenta de nuevo.";
+      setFlash({
+        bad: true,
+        text:
+          text ||
+          "No pudimos registrar la entrega. Revisa la conexión e intenta de nuevo.",
+      });
+    } finally {
+      setTimeout(() => {
+        setFlash(null);
+        setPerson(null);
+        setDelivering(false);
+        lock.current = false;
+      }, 3000);
+    }
+  }
+  return (
+    <main className="scanner">
+      <h1>Escáner de pases</h1>
+      {!camera && !person && <button onClick={start}>Activar cámara</button>}
+      <video ref={video} playsInline muted autoPlay hidden={!camera} />
+      {denied && (
+        <div className="notice">
+          <h2>Cámara bloqueada</h2>
+          <p>
+            Habilita el permiso de cámara en la configuración del navegador y
+            vuelve a intentarlo. Mientras tanto, usa el código manual.
+          </p>
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          lookup(code);
+        }}
+      >
+        <div className="field">
+          <label htmlFor="manual">Código manual</label>
+          <input
+            id="manual"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder="Escribe el código del pase"
+          />
+        </div>
+        <button>Buscar pase</button>
+      </form>
+      {person && (
+        <section className="scan-result">
+          <h2>
+            {person.nombre} {person.apellido}
+          </h2>
+          <p
+            className={`balance ${person.completos_disponibles === 0 ? "none" : ""}`}
+          >
+            {person.completos_disponibles} disponibles
+          </p>
+          <div className="actions">
+            <button
+              disabled={delivering || person.completos_disponibles < 1}
+              onClick={() => deliver(1)}
+            >
+              Entregar 1
+            </button>
+            <button
+              disabled={delivering || person.completos_disponibles < 2}
+              onClick={() => deliver(2)}
+            >
+              Entregar 2
+            </button>
+          </div>
+        </section>
+      )}
+      {flash && (
+        <div className={`overlay ${flash.bad ? "bad" : ""}`} role="status">
+          <h2>{flash.text}</h2>
+        </div>
+      )}
+    </main>
+  );
+}

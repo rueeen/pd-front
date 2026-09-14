@@ -1,1 +1,17 @@
-import{Link}from'react-router-dom';export default function Navbar(){return <header className="nav"><Link className="brand" to="/">Día 256</Link><nav aria-label="Principal"><Link to="/">Evento</Link><Link to="/torneos">Torneos</Link><Link className="button small" to="/registro">Registrarme</Link></nav></header>}
+import { Link } from "react-router-dom";
+export default function Navbar() {
+  return (
+    <header className="nav">
+      <Link className="brand" to="/">
+        Día 256
+      </Link>
+      <nav aria-label="Principal">
+        <Link to="/">Evento</Link>
+        <Link to="/torneos">Torneos</Link>
+        <Link className="button small" to="/registro">
+          Registrarme
+        </Link>
+      </nav>
+    </header>
+  );
+}
