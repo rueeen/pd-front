@@ -14,7 +14,7 @@ export default function Navbar() {
         Día del Programador <span>2026</span>
       </Link>
       <nav aria-label="Principal">
-        <a href="/#torneos">Torneos</a>
+        <Link to="/torneos">Torneos</Link>
         <a href="/#programa">Programa</a>
         <a href="/#preguntas">Preguntas frecuentes</a>
         <Link className="button secondary small" to="/registro">

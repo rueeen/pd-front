@@ -4,6 +4,7 @@ import api from "../api";
 import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
+import bannerProgramador from "../img/banner-dia-programador-2026.svg";
 
 const glyph = ["111011101110", "001010001000", "111011101110", "100000101010", "111011101110"];
 const active = new Set();
@@ -73,6 +74,9 @@ export default function Landing() {
           <p><span aria-hidden="true">◷</span><small>Horario</small><strong>11:00 a 16:00</strong></p>
           <p><span aria-hidden="true">⌖</span><small>Lugar</small><strong>Patio central</strong></p>
         </aside>
+      </section>
+      <section className="event-banner section reveal" aria-label="Imagen destacada del evento">
+        <img src={bannerProgramador} alt="Banner del Día del Programador 2026 de INACAP Sede Arica" />
       </section>
       <div className="reveal"><CuentaRegresiva /></div>
       <section className="section reveal" id="torneos">
