@@ -9,7 +9,7 @@ if (!configuredApiUrl) {
 }
 
 const api = axios.create({
-  baseURL: configuredApiUrl || (import.meta.env.DEV ? "http://localhost:8000" : ""),
+  baseURL: configuredApiUrl || "http://localhost:8000",
 });
 api.interceptors.request.use((c) => {
   const token = localStorage.getItem("access");

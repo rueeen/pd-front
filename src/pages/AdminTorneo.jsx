@@ -109,7 +109,7 @@ export default function AdminTorneo() {
 
   const games = (data?.rondas || []).flatMap((round) => round.partidas);
   return (
-    <main>
+    <main className="admin-page">
       <h1>{data?.torneo || "Administrar torneo"}</h1>
       {error && (
         <p className="error" role="alert">
