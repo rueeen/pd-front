@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api";
+import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
 const emptyMembers = (amount) =>
-  Array.from({ length: amount }, () => ({ rut: "", gamertag: "" }));
+  Array.from({ length: amount }, () => ({
+    rut: "",
+    gamertag: "",
+    status: "idle",
+  }));
 
 export default function InscripcionTorneo() {
   const { slug } = useParams();
@@ -12,6 +17,7 @@ export default function InscripcionTorneo() {
   const [members, setMembers] = useState([]);
   const [errors, setErrors] = useState({});
   const [done, setDone] = useState();
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     api
@@ -29,38 +35,99 @@ export default function InscripcionTorneo() {
   const individual =
     tournament?.modalidad === "individual" ||
     tournament?.jugadores_por_equipo === 1;
+  const validMembers = members.filter(
+    (member) => member.gamertag.trim() && member.status === "valid",
+  ).length;
+  const complete = Boolean(
+    (individual || team.trim()) &&
+    members.length &&
+    validMembers === members.length,
+  );
+  const missing = useMemo(() => {
+    if (!individual && !team.trim()) return "Falta el nombre del equipo.";
+    const incomplete = members.length - validMembers;
+    return incomplete
+      ? `Falta validar ${incomplete} ${incomplete === 1 ? "integrante" : "integrantes"}.`
+      : "";
+  }, [individual, members.length, team, validMembers]);
+
   function updateMember(index, key, value) {
-    setMembers(
-      members.map((member, position) =>
-        position === index ? { ...member, [key]: value } : member,
+    setMembers((current) =>
+      current.map((member, position) =>
+        position === index
+          ? {
+              ...member,
+              [key]: value,
+              ...(key === "rut" ? { status: "idle", detail: "" } : {}),
+            }
+          : member,
       ),
     );
   }
 
+  async function verifyMember(index) {
+    const member = members[index];
+    if (!rutValido(member.rut)) {
+      setMembers((current) =>
+        current.map((item, position) =>
+          position === index
+            ? { ...item, status: "invalid", detail: "Ingresa un RUT válido." }
+            : item,
+        ),
+      );
+      return;
+    }
+    setMembers((current) =>
+      current.map((item, position) =>
+        position === index ? { ...item, status: "checking", detail: "" } : item,
+      ),
+    );
+    try {
+      await api.post("/api/asistentes/verificar/", {
+        rut: limpiarRut(member.rut),
+      });
+      setMembers((current) =>
+        current.map((item, position) =>
+          position === index ? { ...item, status: "valid" } : item,
+        ),
+      );
+    } catch (requestError) {
+      const detail =
+        requestError.response?.data?.detail ||
+        "Esta persona todavía no está registrada al evento.";
+      setMembers((current) =>
+        current.map((item, position) =>
+          position === index ? { ...item, status: "invalid", detail } : item,
+        ),
+      );
+    }
+  }
+
   async function submit(event) {
     event.preventDefault();
+    if (!complete) return;
+    setBusy(true);
     setErrors({});
-    const integrantes = individual ? [members[0]] : members;
-    const nombreEquipo = individual ? members[0]?.gamertag : team;
+    const integrantes = members.map(({ rut, gamertag }) => ({
+      rut: limpiarRut(rut),
+      gamertag,
+    }));
     try {
       const { data } = await api.post(`/api/torneos/${slug}/inscripcion/`, {
-        nombre_equipo: nombreEquipo,
+        nombre_equipo: individual ? members[0].gamertag : team,
         integrantes,
       });
       setDone(data);
     } catch (error) {
       console.error("No pudimos completar la inscripción.", error);
       const data = error.response?.data || {};
-      const general =
-        data.detail || data.non_field_errors?.[0] || "Revisa los datos.";
-      const memberErrors = data.integrantes || data.errores_integrantes || [];
-      if (typeof general === "string") {
-        integrantes.forEach((member, index) => {
-          if (member.rut && general.includes(member.rut))
-            memberErrors[index] = { ...memberErrors[index], rut: general };
-        });
-      }
-      setErrors({ general, integrantes: memberErrors });
+      setErrors({
+        general:
+          data.detail || data.non_field_errors?.[0] || "Revisa los datos.",
+        integrantes: data.integrantes || data.errores_integrantes || [],
+      });
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -86,81 +153,127 @@ export default function InscripcionTorneo() {
   return (
     <main>
       <h1>{tournament?.nombre || "Inscripción"}</h1>
-      <p className="notice">
-        <strong>
-          Todos los integrantes deben estar registrados al evento previamente.
-        </strong>{" "}
-        <Link to="/registro" target="_blank" rel="noreferrer">
-          Abrir registro en otra pestaña
-        </Link>
-        .
-      </p>
-      {errors.general && <p className="error">{errors.general}</p>}
-      <form onSubmit={submit}>
-        {!individual && (
-          <div className="field">
-            <label>Nombre del equipo</label>
-            <input
-              value={team}
-              onChange={(event) => setTeam(event.target.value)}
-              required
-            />
-          </div>
-        )}
-        {!individual && <p>La primera persona será el capitán del equipo.</p>}
-        {members.map((member, index) => (
-          <fieldset className="card" key={index}>
-            <legend>
-              {individual
-                ? "Jugador"
-                : index === 0
-                  ? "Capitán"
-                  : `Integrante ${index + 1}`}
-            </legend>
-            <div className="field">
-              <label>RUT</label>
-              <input
-                value={member.rut}
-                onChange={(event) =>
-                  updateMember(index, "rut", event.target.value)
-                }
-                required
-              />
-              {errors.integrantes?.[index]?.rut && (
-                <p className="error">{errors.integrantes[index].rut}</p>
-              )}
+      <div className="tournament-signup-layout">
+        <form className="team-form" onSubmit={submit}>
+          {!individual && (
+            <div className="signup-progress">
+              <strong>
+                {validMembers} de {members.length}
+              </strong>
+              <span> integrantes válidos</span>
+              <progress max={members.length} value={validMembers} />
             </div>
-            <div className="field">
-              <label>Gamertag</label>
-              <input
-                value={member.gamertag}
-                onChange={(event) =>
-                  updateMember(index, "gamertag", event.target.value)
-                }
-                required
-              />
-              {errors.integrantes?.[index]?.gamertag && (
-                <p className="error">{errors.integrantes[index].gamertag}</p>
-              )}
-            </div>
-          </fieldset>
-        ))}
-        <button>Enviar inscripción</button>
-      </form>
-      {tournament && (
-        <section>
-          <h2>Reglas completas</h2>
-          {Array.isArray(tournament.reglas) ? (
-            <ol>
-              {tournament.reglas.map((rule, index) => (
-                <li key={index}>{rule}</li>
-              ))}
-            </ol>
-          ) : (
-            <p>{tournament.reglas}</p>
           )}
-        </section>
-      )}
+          <p className="notice">
+            <strong>Todos deben estar registrados al evento.</strong>{" "}
+            <Link to="/registro" target="_blank" rel="noreferrer">
+              Abrir registro
+            </Link>
+            .
+          </p>
+          {errors.general && (
+            <p className="error" role="alert">
+              {errors.general}
+            </p>
+          )}
+          {!individual && (
+            <div className="field">
+              <label htmlFor="team-name">Nombre del equipo</label>
+              <input
+                id="team-name"
+                value={team}
+                onChange={(event) => setTeam(event.target.value)}
+                required
+              />
+            </div>
+          )}
+          {!individual && (
+            <p className="captain-explanation">
+              <span className="captain-badge">Capitán</span> Responde por el
+              equipo y podrá modificarlo después.
+            </p>
+          )}
+          <div className={`member-list ${individual ? "individual" : ""}`}>
+            {members.map((member, index) => (
+              <div className={`member-row ${member.status}`} key={index}>
+                {!individual && (
+                  <strong
+                    className="member-number"
+                    aria-label={`Integrante ${index + 1}`}
+                  >
+                    {index + 1}
+                  </strong>
+                )}
+                <div className="field">
+                  <label htmlFor={`rut-${index}`}>RUT</label>
+                  <input
+                    id={`rut-${index}`}
+                    value={member.rut}
+                    onChange={(event) =>
+                      updateMember(
+                        index,
+                        "rut",
+                        formatearRut(event.target.value),
+                      )
+                    }
+                    onBlur={() => verifyMember(index)}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`gamertag-${index}`}>Gamertag</label>
+                  <input
+                    id={`gamertag-${index}`}
+                    value={member.gamertag}
+                    onChange={(event) =>
+                      updateMember(index, "gamertag", event.target.value)
+                    }
+                    required
+                  />
+                </div>
+                <div className="member-verification" role="status">
+                  {member.status === "checking" && "Verificando…"}
+                  {member.status === "valid" && (
+                    <span className="verified">✓ Registrado</span>
+                  )}
+                  {member.status === "invalid" && (
+                    <span className="error">
+                      {member.detail}{" "}
+                      <Link to="/registro" target="_blank">
+                        Registrarse
+                      </Link>
+                    </span>
+                  )}
+                </div>
+                {errors.integrantes?.[index] && (
+                  <p className="error member-api-error">
+                    {errors.integrantes[index].rut ||
+                      errors.integrantes[index].gamertag}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {!complete && <p className="submit-hint">{missing}</p>}
+          <button disabled={!complete || busy}>
+            {busy ? "Enviando…" : "Enviar inscripción"}
+          </button>
+        </form>
+        {tournament && (
+          <aside className="tournament-rules">
+            <h2>Reglas completas</h2>
+            {Array.isArray(tournament.reglas) ? (
+              <ol>
+                {tournament.reglas.map((rule, index) => (
+                  <li key={index}>{rule}</li>
+                ))}
+              </ol>
+            ) : (
+              <p>{tournament.reglas}</p>
+            )}
+          </aside>
+        )}
+      </div>
     </main>
   );
 }

@@ -15,6 +15,7 @@ export default function Navbar() {
       </Link>
       <nav aria-label="Principal">
         <Link to="/torneos">Torneos</Link>
+        <Link to="/mi-pase">Mi pase</Link>
         <a href="/#programa">Programa</a>
         <a href="/#preguntas">Preguntas frecuentes</a>
         <Link className="button secondary small" to="/registro">

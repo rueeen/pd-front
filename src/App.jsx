@@ -10,6 +10,7 @@ import Torneos from "./pages/Torneos";
 import InscripcionTorneo from "./pages/InscripcionTorneo";
 import Bracket from "./pages/Bracket";
 import Login from "./pages/Login";
+import MiPase from "./pages/MiPase";
 
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const AdminEscaner = lazy(() => import("./pages/AdminEscaner"));
@@ -23,6 +24,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/registro" element={<Registro />} />
+          <Route path="/mi-pase" element={<MiPase />} />
           <Route path="/pase/:codigo" element={<Pase />} />
           <Route path="/torneos" element={<Torneos />} />
           <Route
