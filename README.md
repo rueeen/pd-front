@@ -28,3 +28,9 @@ Conecta el repositorio, usa `npm run build` como comando y `dist` como directori
 ## Cámara y QR
 
 Los navegadores solo permiten acceder a la cámara en un contexto seguro: usa HTTPS en producción. Durante el desarrollo, `localhost` se considera un contexto seguro. La cámara se solicita únicamente al pulsar **Activar cámara**; si el permiso se bloquea, puede habilitarse desde la configuración del sitio del navegador o usarse el ingreso manual.
+
+## Verificación integral
+
+El recorrido integral que debe verificarse contra `pd-back` es: registro → pase con QR → inscripción individual → inscripción por equipos → sorteo → carga de resultado → avance en la llave pública → dos canjes y rechazo del tercero.
+
+En este entorno no fue posible ejecutar ese recorrido: el repositorio `pd-back` no está disponible localmente y la red bloqueó su descarga. La verificación queda explícitamente pendiente y no debe considerarse aprobada hasta realizarla con el backend real en ejecución.

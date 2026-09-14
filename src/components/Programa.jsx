@@ -1,1 +1,26 @@
-const rows=[['08:00','Montaje y preparación'],['09:00','Acreditación de competidores'],['10:00','Pruebas técnicas'],['11:00','Apertura del evento'],['11:30','Inicio de torneos'],['13:00','Entrega de completos'],['14:00','Continuación de torneos'],['16:00','Finales y premiación'],['17:00','Cierre de la jornada']];export default function Programa(){return <section className="section alt"><h2>Programa de la jornada</h2><div className="schedule">{rows.map(([h,a])=><div className="schedule-row" key={h}><time>{h}</time><span>{a}</span></div>)}</div></section>}
+const rows = [
+  ["08:00", "Montaje y preparación"],
+  ["09:00", "Acreditación de competidores"],
+  ["10:00", "Pruebas técnicas"],
+  ["11:00", "Apertura del evento"],
+  ["11:30", "Inicio de torneos"],
+  ["13:00", "Entrega de completos"],
+  ["14:00", "Continuación de torneos"],
+  ["16:00", "Finales y premiación"],
+  ["17:00", "Cierre de la jornada"],
+];
+export default function Programa() {
+  return (
+    <section className="section alt">
+      <h2>Programa de la jornada</h2>
+      <div className="schedule">
+        {rows.map(([h, a]) => (
+          <div className="schedule-row" key={h}>
+            <time>{h}</time>
+            <span>{a}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

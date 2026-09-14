@@ -1,2 +1,45 @@
-import{Routes,Route}from'react-router-dom';import Navbar from'./components/Navbar';import RutaProtegida from'./components/RutaProtegida';import Landing from'./pages/Landing';import Registro from'./pages/Registro';import Pase from'./pages/Pase';import Torneos from'./pages/Torneos';import InscripcionTorneo from'./pages/InscripcionTorneo';import Bracket from'./pages/Bracket';import Login from'./pages/Login';import AdminPanel from'./pages/AdminPanel';import AdminEscaner from'./pages/AdminEscaner';import AdminTorneo from'./pages/AdminTorneo';
-export default function App(){return <><Navbar/><Routes><Route path="/" element={<Landing/>}/><Route path="/registro" element={<Registro/>}/><Route path="/pase/:codigo" element={<Pase/>}/><Route path="/torneos" element={<Torneos/>}/><Route path="/torneos/:slug/inscripcion" element={<InscripcionTorneo/>}/><Route path="/torneos/:slug/llave" element={<Bracket/>}/><Route path="/admin/login" element={<Login/>}/><Route element={<RutaProtegida/>}><Route path="/admin" element={<AdminPanel/>}/><Route path="/admin/escaner" element={<AdminEscaner/>}/><Route path="/admin/torneos/:slug" element={<AdminTorneo/>}/></Route><Route path="*" element={<main><h1>Página no encontrada</h1></main>}/></Routes></>}
+import { Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import RutaProtegida from "./components/RutaProtegida";
+import Landing from "./pages/Landing";
+import Registro from "./pages/Registro";
+import Pase from "./pages/Pase";
+import Torneos from "./pages/Torneos";
+import InscripcionTorneo from "./pages/InscripcionTorneo";
+import Bracket from "./pages/Bracket";
+import Login from "./pages/Login";
+import AdminPanel from "./pages/AdminPanel";
+import AdminEscaner from "./pages/AdminEscaner";
+import AdminTorneo from "./pages/AdminTorneo";
+export default function App() {
+  return (
+    <>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/registro" element={<Registro />} />
+        <Route path="/pase/:codigo" element={<Pase />} />
+        <Route path="/torneos" element={<Torneos />} />
+        <Route
+          path="/torneos/:slug/inscripcion"
+          element={<InscripcionTorneo />}
+        />
+        <Route path="/torneos/:slug/llave" element={<Bracket />} />
+        <Route path="/admin/login" element={<Login />} />
+        <Route element={<RutaProtegida />}>
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/escaner" element={<AdminEscaner />} />
+          <Route path="/admin/torneos/:slug" element={<AdminTorneo />} />
+        </Route>
+        <Route
+          path="*"
+          element={
+            <main>
+              <h1>Página no encontrada</h1>
+            </main>
+          }
+        />
+      </Routes>
+    </>
+  );
+}

@@ -1,1 +1,25 @@
-import{useEffect,useState}from'react';import api from'../api';import TorneoCard from'../components/TorneoCard';export default function Torneos(){const[t,setT]=useState([]),[e,setE]=useState('');useEffect(()=>{api.get('/api/torneos/').then(r=>setT(r.data.results||r.data)).catch(()=>setE('No pudimos cargar los torneos.'))},[]);return <main><h1>Torneos</h1><p className="lead">Compite en Smash, VALORANT o League of Legends.</p>{e&&<p className="error">{e}</p>}<div className="cards">{t.map(x=><TorneoCard t={x} key={x.slug}/>)}</div></main>}
+import { useEffect, useState } from "react";
+import api from "../api";
+import TorneoCard from "../components/TorneoCard";
+export default function Torneos() {
+  const [t, setT] = useState([]),
+    [e, setE] = useState("");
+  useEffect(() => {
+    api
+      .get("/api/torneos/")
+      .then((r) => setT(r.data.results || r.data))
+      .catch(() => setE("No pudimos cargar los torneos."));
+  }, []);
+  return (
+    <main>
+      <h1>Torneos</h1>
+      <p className="lead">Compite en Smash, VALORANT o League of Legends.</p>
+      {e && <p className="error">{e}</p>}
+      <div className="cards">
+        {t.map((x) => (
+          <TorneoCard t={x} key={x.slug} />
+        ))}
+      </div>
+    </main>
+  );
+}

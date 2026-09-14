@@ -1,1 +1,47 @@
-import{useState}from'react';import{useLocation,useNavigate}from'react-router-dom';import api from'../api';export default function Login(){const[u,setU]=useState(''),[p,setP]=useState(''),[e,setE]=useState(''),nav=useNavigate(),loc=useLocation();async function submit(x){x.preventDefault();try{const r=await api.post('/api/token/',{username:u,password:p});localStorage.setItem('access',r.data.access);localStorage.setItem('refresh',r.data.refresh);nav(loc.state?.from?.pathname||'/admin',{replace:true})}catch{setE('Credenciales incorrectas. Revisa e intenta nuevamente.')}}return <main><h1>Acceso del equipo</h1><form onSubmit={submit}>{e&&<p className="error">{e}</p>}<div className="field"><label>Usuario</label><input autoComplete="username" value={u} onChange={e=>setU(e.target.value)}/></div><div className="field"><label>Contraseña</label><input type="password" autoComplete="current-password" value={p} onChange={e=>setP(e.target.value)}/></div><button>Ingresar</button></form></main>}
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import api from "../api";
+export default function Login() {
+  const [u, setU] = useState(""),
+    [p, setP] = useState(""),
+    [e, setE] = useState(""),
+    nav = useNavigate(),
+    loc = useLocation();
+  async function submit(x) {
+    x.preventDefault();
+    try {
+      const r = await api.post("/api/token/", { username: u, password: p });
+      localStorage.setItem("access", r.data.access);
+      localStorage.setItem("refresh", r.data.refresh);
+      nav(loc.state?.from?.pathname || "/admin", { replace: true });
+    } catch {
+      setE("Credenciales incorrectas. Revisa e intenta nuevamente.");
+    }
+  }
+  return (
+    <main>
+      <h1>Acceso del equipo</h1>
+      <form onSubmit={submit}>
+        {e && <p className="error">{e}</p>}
+        <div className="field">
+          <label>Usuario</label>
+          <input
+            autoComplete="username"
+            value={u}
+            onChange={(e) => setU(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={p}
+            onChange={(e) => setP(e.target.value)}
+          />
+        </div>
+        <button>Ingresar</button>
+      </form>
+    </main>
+  );
+}
