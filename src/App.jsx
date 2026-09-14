@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import RutaProtegida from "./components/RutaProtegida";
@@ -8,9 +9,11 @@ import Torneos from "./pages/Torneos";
 import InscripcionTorneo from "./pages/InscripcionTorneo";
 import Bracket from "./pages/Bracket";
 import Login from "./pages/Login";
-import AdminPanel from "./pages/AdminPanel";
-import AdminEscaner from "./pages/AdminEscaner";
-import AdminTorneo from "./pages/AdminTorneo";
+
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const AdminEscaner = lazy(() => import("./pages/AdminEscaner"));
+const AdminTorneo = lazy(() => import("./pages/AdminTorneo"));
+
 export default function App() {
   return (
     <>
@@ -27,9 +30,30 @@ export default function App() {
         <Route path="/torneos/:slug/llave" element={<Bracket />} />
         <Route path="/admin/login" element={<Login />} />
         <Route element={<RutaProtegida />}>
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/admin/escaner" element={<AdminEscaner />} />
-          <Route path="/admin/torneos/:slug" element={<AdminTorneo />} />
+          <Route
+            path="/admin"
+            element={
+              <Suspense fallback={<p>Cargando administración…</p>}>
+                <AdminPanel />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/escaner"
+            element={
+              <Suspense fallback={<p>Cargando administración…</p>}>
+                <AdminEscaner />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/torneos/:slug"
+            element={
+              <Suspense fallback={<p>Cargando administración…</p>}>
+                <AdminTorneo />
+              </Suspense>
+            }
+          />
         </Route>
         <Route
           path="*"
