@@ -29,7 +29,7 @@ export default function CuentaRegresiva() {
             ["segundos", t.s],
           ].map(([l, v]) => (
             <span key={l}>
-              <b>{v}</b>
+              <b className={l === "segundos" ? "tick" : ""} key={l === "segundos" ? v : l}>{v}</b>
               {l}
             </span>
           ))}

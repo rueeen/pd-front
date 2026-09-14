@@ -20,7 +20,7 @@ export default function AdminPanel() {
       });
   }, []);
   return (
-    <main>
+    <main className="admin-page">
       <h1>Panel del evento</h1>
       {e && <p className="error">{e}</p>}
       <div className="stats">

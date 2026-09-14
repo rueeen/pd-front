@@ -4,7 +4,9 @@ Aplicación React para el evento de INACAP Sede Arica.
 
 ## Desarrollo
 
-Requiere Node.js 18 o superior.
+**Primer paso:** copia `.env.example` a `.env` antes de arrancar el servidor.
+Vite solo lee las variables al iniciar; si creas o modificas `.env` después,
+debes reiniciar el servidor. Requiere Node.js 18 o superior.
 
 ```bash
 cp .env.example .env
@@ -13,9 +15,6 @@ npm run dev
 ```
 
 Configura `VITE_API_URL` con la URL del backend, sin una barra final. Para producción debe ser una URL HTTPS.
-La copia de `.env.example` a `.env` debe ser el primer paso: Vite solo lee las
-variables al arrancar, por lo que hay que reiniciar el servidor si se crea o
-modifica el archivo después.
 
 ## Build
 

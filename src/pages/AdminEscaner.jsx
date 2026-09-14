@@ -112,7 +112,7 @@ export default function AdminEscaner() {
     }
   }
   return (
-    <main className="scanner">
+    <main className="scanner admin-page">
       <h1>Escáner de pases</h1>
       {!camera && !person && <button onClick={start}>Activar cámara</button>}
       <video ref={video} playsInline muted autoPlay hidden={!camera} />
