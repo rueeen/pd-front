@@ -13,7 +13,10 @@ export default function Pase() {
     api
       .get(`/api/pase/${codigo}/`)
       .then((r) => setP(r.data))
-      .catch(() => setBad(true));
+      .catch((requestError) => {
+        console.error("No pudimos cargar el pase.", requestError);
+        setBad(true);
+      });
   }, [codigo]);
   const url = `${location.origin}/pase/${codigo}`;
   function download() {

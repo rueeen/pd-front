@@ -7,8 +7,17 @@ export default function AdminPanel() {
   useEffect(() => {
     api
       .get("/api/admin/resumen/")
-      .then((r) => setD(r.data))
-      .catch(() => setE("No se pudo cargar el resumen."));
+      .then((r) => {
+        if (!Array.isArray(r.data?.inscritos_por_torneo)) {
+          throw new TypeError("Los inscritos por torneo no son una lista.");
+        }
+        setD(r.data);
+      })
+      .catch((requestError) => {
+        console.error("No se pudo cargar el resumen.", requestError);
+        setD(undefined);
+        setE("No se pudo cargar el resumen.");
+      });
   }, []);
   return (
     <main>

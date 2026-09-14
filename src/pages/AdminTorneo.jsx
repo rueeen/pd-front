@@ -14,8 +14,25 @@ export default function AdminTorneo() {
     setError("");
     return api
       .get(`/api/admin/torneos/${slug}/`)
-      .then((response) => setData(response.data))
-      .catch(() => setError("No se pudo cargar el torneo."));
+      .then((response) => {
+        const lists = [
+          response.data?.equipos_confirmados,
+          response.data?.equipos_espera,
+          response.data?.rondas,
+        ];
+        if (
+          !lists.every(Array.isArray) ||
+          !response.data.rondas.every((round) => Array.isArray(round.partidas))
+        ) {
+          throw new TypeError("Los datos del torneo no contienen listas válidas.");
+        }
+        setData(response.data);
+      })
+      .catch((requestError) => {
+        console.error("No se pudo cargar el torneo.", requestError);
+        setData(undefined);
+        setError("No se pudo cargar el torneo.");
+      });
   }, [slug]);
   useEffect(() => {
     load();
@@ -26,6 +43,7 @@ export default function AdminTorneo() {
       await api.patch(`/api/admin/equipos/${id}/`, { estado });
       await load();
     } catch (requestError) {
+      console.error("No se pudo actualizar el equipo.", requestError);
       setError(
         requestError.response?.data?.detail ||
           "No se pudo actualizar el equipo.",
@@ -61,6 +79,7 @@ export default function AdminTorneo() {
       await api.post(`/api/admin/torneos/${slug}/sorteo/`);
       await load();
     } catch (requestError) {
+      console.error("No se pudo sortear la llave.", requestError);
       setError(
         requestError.response?.data?.detail || "No se pudo sortear la llave.",
       );
@@ -80,6 +99,7 @@ export default function AdminTorneo() {
       });
       await load();
     } catch (requestError) {
+      console.error("No se pudo guardar el resultado.", requestError);
       setError(
         requestError.response?.data?.detail ||
           "No se pudo guardar el resultado.",

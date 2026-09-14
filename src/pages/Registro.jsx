@@ -73,6 +73,7 @@ export default function Registro() {
         state: { recuperado: data.recuperado },
       });
     } catch (error) {
+      console.error("No pudimos completar el registro.", error);
       const responseErrors = error.response?.data;
       if (error.response?.status === 409) {
         setErrors({

@@ -14,7 +14,8 @@ export default function Login() {
       localStorage.setItem("access", r.data.access);
       localStorage.setItem("refresh", r.data.refresh);
       nav(loc.state?.from?.pathname || "/admin", { replace: true });
-    } catch {
+    } catch (requestError) {
+      console.error("No se pudo iniciar sesión.", requestError);
       setE("Credenciales incorrectas. Revisa e intenta nuevamente.");
     }
   }

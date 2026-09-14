@@ -7,8 +7,17 @@ export default function Torneos() {
   useEffect(() => {
     api
       .get("/api/torneos/")
-      .then((r) => setT(r.data.results || r.data))
-      .catch(() => setE("No pudimos cargar los torneos."));
+      .then((r) => {
+        if (!Array.isArray(r.data)) {
+          throw new TypeError("La respuesta de torneos no es una lista.");
+        }
+        setT(r.data);
+      })
+      .catch((requestError) => {
+        console.error("No pudimos cargar los torneos.", requestError);
+        setT([]);
+        setE("No pudimos cargar los torneos.");
+      });
   }, []);
   return (
     <main>

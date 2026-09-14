@@ -20,11 +20,21 @@ glyph.forEach((row, y) =>
 );
 export default function Landing() {
   const [t, setT] = useState([]);
+  const [error, setError] = useState("");
   useEffect(() => {
     api
       .get("/api/torneos/")
-      .then((r) => setT(r.data.results || r.data))
-      .catch(() => {});
+      .then((r) => {
+        if (!Array.isArray(r.data)) {
+          throw new TypeError("La respuesta de torneos no es una lista.");
+        }
+        setT(r.data);
+      })
+      .catch((requestError) => {
+        console.error("No pudimos cargar los torneos de la portada.", requestError);
+        setT([]);
+        setError("No pudimos cargar los torneos en este momento.");
+      });
   }, []);
   return (
     <>
@@ -73,6 +83,11 @@ export default function Landing() {
       </section>
       <section className="section">
         <h2>Los tres torneos</h2>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         {t.length ? (
           <div className="cards">
             {t.map((x) => (
