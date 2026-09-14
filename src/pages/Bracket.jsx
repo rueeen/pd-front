@@ -13,10 +13,11 @@ export default function Bracket() {
       .then((r) => {
         if (
           !Array.isArray(r.data?.rondas) ||
-          !Array.isArray(r.data?.equipos_confirmados) ||
           !r.data.rondas.every((round) => Array.isArray(round.partidas))
         ) {
-          throw new TypeError("Los datos de la llave no contienen listas válidas.");
+          throw new TypeError(
+            "Los datos de la llave no contienen listas válidas.",
+          );
         }
         setD(r.data);
       })
@@ -35,12 +36,22 @@ export default function Bracket() {
           <h1>{d?.torneo || d?.nombre || "Llave del torneo"}</h1>
           <div className="tournament-meta">
             {d?.horario && <span>Bloque {d.horario}</span>}
-            <strong>{d?.estado === "finalizado" ? "Finalizado" : d?.rondas?.length ? "En curso" : "Pendiente de sorteo"}</strong>
+            <strong>
+              {d?.estado === "finalizado"
+                ? "Finalizado"
+                : d?.rondas?.length
+                  ? "En curso"
+                  : "Pendiente de sorteo"}
+            </strong>
           </div>
         </div>
         <div className="actions">
-          <Link className="button secondary" to="/torneos">Todos los torneos</Link>
-          <button className="secondary" onClick={load}>Recargar llave</button>
+          <Link className="button secondary" to="/torneos">
+            Todos los torneos
+          </Link>
+          <button className="secondary" onClick={load}>
+            Recargar llave
+          </button>
         </div>
       </header>
       {e && <p className="error">{e}</p>}
@@ -50,12 +61,14 @@ export default function Bracket() {
         d && (
           <section className="pending-bracket">
             <h2>El sorteo aún no se realiza</h2>
-            <h3>Equipos inscritos</h3>
-            <div className="registered-teams">
-              {d.equipos_confirmados.map((x) => (
-                <article className="card" key={x.id}><strong>{x.nombre}</strong></article>
-              ))}
-            </div>
+            <p className="lead">
+              <strong>{d.equipos_inscritos ?? d.inscritos ?? 0}</strong> de{" "}
+              {d.cupo_equipos ?? d.cupos ?? 0} equipos inscritos.
+            </p>
+            <p>
+              La llave se publica al realizarse el sorteo, antes del bloque de
+              competencia.
+            </p>
           </section>
         )
       )}

@@ -1,26 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-
-const clean = (s) => s.replace(/[^0-9kK]/g, "").toUpperCase();
-function format(s) {
-  s = clean(s);
-  if (s.length < 2) return s;
-  return `${Number(s.slice(0, -1)).toLocaleString("es-CL")}-${s.slice(-1)}`;
-}
-function valid(s) {
-  const v = clean(s);
-  const body = v.slice(0, -1);
-  let sum = 0;
-  let multiplier = 2;
-  for (let i = body.length - 1; i >= 0; i--) {
-    sum += Number(body[i]) * multiplier;
-    multiplier = multiplier === 7 ? 2 : multiplier + 1;
-  }
-  const result = 11 - (sum % 11);
-  const digit = result === 11 ? "0" : result === 10 ? "K" : String(result);
-  return body.length >= 7 && digit === v.slice(-1);
-}
+import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
 const initialForm = {
   nombre: "",
@@ -53,6 +34,7 @@ export default function Registro() {
       setCatalogStatus("ready");
     } catch (requestError) {
       if (retry) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         return loadCatalog(false);
       }
       console.error("No pudimos cargar el catálogo de áreas.", requestError);
@@ -68,7 +50,7 @@ export default function Registro() {
   const change = (event) => {
     const { name } = event.target;
     const value =
-      name === "rut" ? format(event.target.value) : event.target.value;
+      name === "rut" ? formatearRut(event.target.value) : event.target.value;
     setForm((current) => ({
       ...current,
       [name]: value,
@@ -79,7 +61,8 @@ export default function Registro() {
       if (name === "area") next.carrera = undefined;
       if (name === "tipo") {
         if (value === "estudiante") {
-          if (!form.area) next.area = "El área es obligatoria para estudiantes.";
+          if (!form.area)
+            next.area = "El área es obligatoria para estudiantes.";
           if (!form.carrera)
             next.carrera = "La carrera es obligatoria para estudiantes.";
         } else {
@@ -106,7 +89,7 @@ export default function Registro() {
         validation.area =
           "Necesitas cargar el catálogo para registrarte como estudiante.";
     }
-    if (!valid(form.rut))
+    if (!rutValido(form.rut))
       validation.rut = "Ingresa un RUT válido con su dígito verificador.";
     if (form.email && !/^[^@]+@[^@]+\.[^@]+$/.test(form.email))
       validation.email = "Ingresa un correo válido.";
@@ -117,7 +100,7 @@ export default function Registro() {
     try {
       const { data } = await api.post("/api/asistentes/", {
         ...form,
-        rut: clean(form.rut),
+        rut: limpiarRut(form.rut),
       });
       navigate(`/pase/${data.codigo}/`, {
         state: { recuperado: data.recuperado },
@@ -226,9 +209,7 @@ export default function Registro() {
           {errors.area && <p className="error">{message("area")}</p>}
         </div>
         <div className="field">
-          <label htmlFor="carrera">
-            Carrera{student ? "" : " (opcional)"}
-          </label>
+          <label htmlFor="carrera">Carrera{student ? "" : " (opcional)"}</label>
           <select
             id="carrera"
             name="carrera"

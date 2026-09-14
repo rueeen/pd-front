@@ -8,8 +8,11 @@ export default function Pase() {
     [p, setP] = useState(),
     [bad, setBad] = useState(false),
     [copied, setCopied] = useState(false),
+    [editing, setEditing] = useState(null),
+    [dialog, setDialog] = useState(null),
+    [operationError, setOperationError] = useState(""),
     ref = useRef();
-  useEffect(() => {
+  const load = () =>
     api
       .get(`/api/pase/${codigo}/`)
       .then((r) => setP(r.data))
@@ -17,6 +20,10 @@ export default function Pase() {
         console.error("No pudimos cargar el pase.", requestError);
         setBad(true);
       });
+  useEffect(() => {
+    load();
+    // El código de la URL identifica el pase que se vuelve a cargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codigo]);
   const url = `${location.origin}/pase/${codigo}`;
   function download() {
@@ -42,6 +49,24 @@ export default function Pase() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }
+  async function manage(slug, path, payload = {}) {
+    setOperationError("");
+    try {
+      await api.patch(`/api/torneos/${slug}/equipo/${path}/`, {
+        ...payload,
+        codigo_capitan: codigo,
+      });
+      setEditing(null);
+      setDialog(null);
+      await load();
+    } catch (requestError) {
+      console.error("No pudimos modificar el equipo.", requestError);
+      setOperationError(
+        requestError.response?.data?.detail ||
+          "No pudimos modificar el equipo.",
+      );
+    }
+  }
   if (bad)
     return (
       <main>
@@ -64,7 +89,7 @@ export default function Pase() {
   const n = p.completos_disponibles;
   return (
     <main>
-      <article className="pass">
+      <article className="pass pass-details">
         {loc.state?.recuperado && (
           <p className="notice">
             <strong>Registro listo.</strong> Recuperamos tu registro anterior.
@@ -73,7 +98,9 @@ export default function Pase() {
         <h1>
           {p.nombre} {p.apellido}
         </h1>
-        {p.carrera_nombre && <p className="person-career">{p.carrera_nombre}</p>}
+        {p.carrera_nombre && (
+          <p className="person-career">{p.carrera_nombre}</p>
+        )}
         <div className="qr" ref={ref}>
           <QRCodeCanvas value={url} size={260} level="M" marginSize={1} />
         </div>
@@ -101,16 +128,218 @@ export default function Pase() {
           dispositivo.
         </p>
         {p.torneos?.length > 0 && (
-          <section>
+          <section className="pass-tournaments">
             <h2>Tus torneos</h2>
-            <ul>
+            {operationError && (
+              <p className="error" role="alert">
+                {operationError}
+              </p>
+            )}
+            <div className="pass-tournament-list">
               {p.torneos.map((t, i) => (
-                <li key={t.slug || i}>{t.nombre || t}</li>
+                <article className="card pass-tournament" key={t.slug || i}>
+                  <h3>{t.nombre || t.torneo}</h3>
+                  <p>
+                    <span className="data-label">Bloque horario</span>{" "}
+                    {t.bloque_horario || t.horario}
+                  </p>
+                  <p>
+                    <span className="data-label">Equipo</span>{" "}
+                    {t.nombre_equipo || t.equipo?.nombre}
+                  </p>
+                  <p
+                    className={`team-status ${t.estado === "confirmado" ? "confirmed" : ""}`}
+                  >
+                    {t.estado === "espera"
+                      ? `Lista de espera · posición ${t.posicion_espera}`
+                      : t.estado === "confirmado"
+                        ? "✓ Confirmado"
+                        : t.estado}
+                  </p>
+                  <h4>Compañeros</h4>
+                  <ul className="pass-roster">
+                    {(t.integrantes || t.equipo?.integrantes || []).map(
+                      (member, index) => (
+                        <li key={member.id || index}>
+                          <span>
+                            {member.nombre_completo ||
+                              member.nombre ||
+                              `Integrante ${index + 1}`}
+                          </span>
+                          <strong>{member.gamertag}</strong>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <Link to={`/torneos/${t.slug}/llave`}>Ver llave pública</Link>
+                  {t.es_capitan && (t.sorteado || t.llave_sorteada) && (
+                    <p className="notice">
+                      La llave ya se sorteó. Cualquier cambio debe verse con el
+                      coordinador.
+                    </p>
+                  )}
+                  {t.es_capitan &&
+                    t.inscripciones_abiertas &&
+                    !(t.sorteado || t.llave_sorteada) && (
+                      <div className="team-management">
+                        <button
+                          className="secondary"
+                          type="button"
+                          onClick={() =>
+                            setEditing({
+                              type: "name",
+                              slug: t.slug,
+                              value: t.nombre_equipo || t.equipo?.nombre || "",
+                            })
+                          }
+                        >
+                          Cambiar nombre
+                        </button>
+                        <button
+                          className="secondary"
+                          type="button"
+                          onClick={() =>
+                            setEditing({
+                              type: "member",
+                              slug: t.slug,
+                              integrantes:
+                                t.integrantes || t.equipo?.integrantes || [],
+                              anterior: "",
+                              rut: "",
+                              gamertag: "",
+                            })
+                          }
+                        >
+                          Reemplazar integrante
+                        </button>
+                        <button
+                          className="secondary danger"
+                          type="button"
+                          onClick={() => setDialog(t)}
+                        >
+                          Retirar equipo
+                        </button>
+                      </div>
+                    )}
+                  {editing?.slug === t.slug && editing.type === "name" && (
+                    <form
+                      className="inline-management"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        manage(t.slug, "nombre", {
+                          nombre_equipo: editing.value,
+                        });
+                      }}
+                    >
+                      <label>
+                        Nuevo nombre
+                        <input
+                          value={editing.value}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              value: event.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </label>
+                      <button>Guardar nombre</button>
+                    </form>
+                  )}
+                  {editing?.slug === t.slug && editing.type === "member" && (
+                    <form
+                      className="inline-management"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        manage(t.slug, "integrante", {
+                          integrante_id: editing.anterior,
+                          rut: editing.rut,
+                          gamertag: editing.gamertag,
+                        });
+                      }}
+                    >
+                      <label>
+                        Integrante a reemplazar
+                        <select
+                          value={editing.anterior}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              anterior: event.target.value,
+                            })
+                          }
+                          required
+                        >
+                          <option value="">Selecciona</option>
+                          {editing.integrantes
+                            .filter((member) => !member.es_capitan)
+                            .map((member) => (
+                              <option key={member.id} value={member.id}>
+                                {member.gamertag}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label>
+                        RUT del reemplazo
+                        <input
+                          value={editing.rut}
+                          onChange={(event) =>
+                            setEditing({ ...editing, rut: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Gamertag
+                        <input
+                          value={editing.gamertag}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              gamertag: event.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </label>
+                      <button>Guardar integrante</button>
+                    </form>
+                  )}
+                </article>
               ))}
-            </ul>
+            </div>
           </section>
         )}
       </article>
+      {dialog && (
+        <div className="dialog-backdrop" role="presentation">
+          <section
+            className="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="withdraw-title"
+          >
+            <h2 id="withdraw-title">¿Retirar el equipo?</h2>
+            <p>
+              El cupo pasará al primer equipo de la lista de espera. Esta acción
+              no se puede deshacer.
+            </p>
+            <div className="actions">
+              <button
+                className="danger"
+                onClick={() => manage(dialog.slug, "retirar")}
+              >
+                Sí, retirar equipo
+              </button>
+              <button className="secondary" onClick={() => setDialog(null)}>
+                Cancelar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
