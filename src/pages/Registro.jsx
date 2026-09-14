@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 
@@ -39,23 +39,73 @@ export default function Registro() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [areas, setAreas] = useState([]);
+  const [catalogStatus, setCatalogStatus] = useState("loading");
   const navigate = useNavigate();
 
-  const change = (event) =>
-    setForm({
-      ...form,
-      [event.target.name]:
-        event.target.name === "rut"
-          ? format(event.target.value)
-          : event.target.value,
+  const loadCatalog = useCallback(async (retry = true) => {
+    setCatalogStatus("loading");
+    try {
+      const { data } = await api.get("/api/catalogo/areas/");
+      if (!Array.isArray(data))
+        throw new TypeError("El catálogo no es una lista.");
+      setAreas(data);
+      setCatalogStatus("ready");
+    } catch (requestError) {
+      if (retry) {
+        return loadCatalog(false);
+      }
+      console.error("No pudimos cargar el catálogo de áreas.", requestError);
+      setAreas([]);
+      setCatalogStatus("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCatalog();
+  }, [loadCatalog]);
+
+  const change = (event) => {
+    const { name } = event.target;
+    const value =
+      name === "rut" ? format(event.target.value) : event.target.value;
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "area" ? { carrera: "" } : {}),
+    }));
+    setErrors((current) => {
+      const next = { ...current, [name]: undefined };
+      if (name === "area") next.carrera = undefined;
+      if (name === "tipo") {
+        if (value === "estudiante") {
+          if (!form.area) next.area = "El área es obligatoria para estudiantes.";
+          if (!form.carrera)
+            next.carrera = "La carrera es obligatoria para estudiantes.";
+        } else {
+          next.area = undefined;
+          next.carrera = undefined;
+        }
+      }
+      return next;
     });
+  };
 
   async function submit(event) {
     event.preventDefault();
     const validation = {};
-    ["nombre", "apellido", "email", "tipo", "area"].forEach((key) => {
+    ["nombre", "apellido", "email", "tipo"].forEach((key) => {
       if (!form[key]) validation[key] = "Completa este campo.";
     });
+    if (form.tipo === "estudiante") {
+      if (!form.area)
+        validation.area = "El área es obligatoria para estudiantes.";
+      if (!form.carrera)
+        validation.carrera = "La carrera es obligatoria para estudiantes.";
+      if (catalogStatus !== "ready")
+        validation.area =
+          "Necesitas cargar el catálogo para registrarte como estudiante.";
+    }
     if (!valid(form.rut))
       validation.rut = "Ingresa un RUT válido con su dígito verificador.";
     if (form.email && !/^[^@]+@[^@]+\.[^@]+$/.test(form.email))
@@ -113,10 +163,12 @@ export default function Registro() {
     ["rut", "RUT"],
     ["email", "Correo"],
     ["telefono", "Teléfono (opcional)"],
-    ["carrera", "Carrera (opcional)"],
   ];
   const message = (key) =>
     Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+  const student = form.tipo === "estudiante";
+  const selectedArea = areas.find((area) => area.slug === form.area);
+  const careers = selectedArea?.carreras || [];
 
   return (
     <main>
@@ -151,20 +203,71 @@ export default function Registro() {
           {errors.tipo && <p className="error">{message("tipo")}</p>}
         </div>
         <div className="field">
-          <label htmlFor="area">Área</label>
-          <select id="area" name="area" value={form.area} onChange={change}>
-            <option value="">Selecciona</option>
-            <option value="informatica">
-              Informática, Ciberseguridad y Telecomunicaciones
+          <label htmlFor="area">Área{student ? "" : " (opcional)"}</label>
+          <select
+            id="area"
+            name="area"
+            value={form.area}
+            onChange={change}
+            disabled={catalogStatus !== "ready"}
+            aria-invalid={Boolean(errors.area)}
+          >
+            <option value="">
+              {catalogStatus === "loading"
+                ? "Cargando áreas"
+                : "Selecciona un área"}
             </option>
-            <option value="diseno">Diseño e Industria Digital</option>
-            <option value="automatizacion">
-              Automatización, Electrónica y Robótica
-            </option>
-            <option value="otra">Otra</option>
+            {areas.map((area) => (
+              <option key={area.slug} value={area.slug}>
+                {area.nombre}
+              </option>
+            ))}
           </select>
           {errors.area && <p className="error">{message("area")}</p>}
         </div>
+        <div className="field">
+          <label htmlFor="carrera">
+            Carrera{student ? "" : " (opcional)"}
+          </label>
+          <select
+            id="carrera"
+            name="carrera"
+            value={form.carrera}
+            onChange={change}
+            disabled={catalogStatus !== "ready" || !form.area}
+            aria-invalid={Boolean(errors.carrera)}
+          >
+            <option value="">
+              {!form.area ? "Primero elige un área" : "Selecciona una carrera"}
+            </option>
+            {careers.map((career) => (
+              <option key={career.slug} value={career.slug}>
+                {career.nombre}
+              </option>
+            ))}
+          </select>
+          {errors.carrera && <p className="error">{message("carrera")}</p>}
+        </div>
+        {catalogStatus === "error" && (
+          <div className="notice catalog-notice" role="alert">
+            <p>
+              No pudimos cargar las áreas y carreras. Puedes continuar sin estos
+              datos si no eres estudiante.
+            </p>
+            {student && (
+              <p>
+                Como estudiante, necesitas cargar el catálogo para registrarte.
+              </p>
+            )}
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => loadCatalog()}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="aporte">Aporte colaborativo opcional</label>
           <select
