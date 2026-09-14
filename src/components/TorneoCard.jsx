@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 export default function TorneoCard({ t }) {
+  const waitlist = t.inscripciones_abiertas && Number(t.cupos_disponibles) <= 0;
   const time = (value) => value?.slice(0, 5);
   const modes = {
     individual: "Individual",
@@ -28,8 +29,13 @@ export default function TorneoCard({ t }) {
       </p>
       <p>{modes[t.modalidad] ?? t.modalidad}</p>
       <strong className="availability">
-        {t.cupos_disponibles} cupos disponibles
+        {waitlist ? "Cupos completos · lista de espera" : `${t.cupos_disponibles} cupos disponibles`}
       </strong>
+      {waitlist && (
+        <p className="waitlist-note">
+          Tu equipo entra si se libera un lugar o si se amplía el cupo.
+        </p>
+      )}
       <span className="tournament-status">
         {t.estado === "finalizado"
           ? "Finalizado"
@@ -42,7 +48,7 @@ export default function TorneoCard({ t }) {
       <div className="card-actions">
         {t.inscripciones_abiertas && (
           <Link className="button" to={`/torneos/${t.slug}/inscripcion`}>
-            Inscribirme
+            {waitlist ? "Inscribirme en lista de espera" : "Inscribirme"}
           </Link>
         )}
         <Link className="button secondary" to={`/torneos/${t.slug}/llave`}>

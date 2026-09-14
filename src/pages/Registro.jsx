@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
@@ -22,6 +22,7 @@ export default function Registro() {
   const [busy, setBusy] = useState(false);
   const [areas, setAreas] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [configuration, setConfiguration] = useState();
   const navigate = useNavigate();
 
   const loadCatalog = useCallback(async (retry = true) => {
@@ -45,7 +46,17 @@ export default function Registro() {
 
   useEffect(() => {
     loadCatalog();
+    api
+      .get("/api/configuracion/")
+      .then(({ data }) => setConfiguration(data))
+      .catch((requestError) =>
+        console.error("No pudimos cargar la disponibilidad.", requestError),
+      );
   }, [loadCatalog]);
+
+  const unavailable =
+    configuration &&
+    (!configuration.registro_abierto || configuration.cupos_disponibles <= 0);
 
   const change = (event) => {
     const { name } = event.target;
@@ -110,7 +121,8 @@ export default function Registro() {
       const responseErrors = error.response?.data;
       if (error.response?.status === 409) {
         setErrors({
-          rut: responseErrors?.detail || "No pudimos completar el registro.",
+          capacity:
+            responseErrors?.detail || "No pudimos completar el registro.",
         });
       } else if (responseErrors && typeof responseErrors === "object") {
         const unknown = Object.entries(responseErrors).filter(
@@ -160,7 +172,17 @@ export default function Registro() {
         Registro gratuito. Al terminar recibirás tu pase con QR.
       </p>
       {errors.general && <p className="error">{errors.general}</p>}
-      <form onSubmit={submit} noValidate>
+      {(unavailable || errors.capacity) && (
+        <div className="notice availability-closed" role="alert">
+          <p>
+            {errors.capacity || configuration?.mensaje_cupos_agotados ||
+              "El registro no está disponible."}
+          </p>
+          <Link to="/mi-pase">Ya me inscribí: abrir mi pase</Link>
+        </div>
+      )}
+      <form onSubmit={submit} noValidate aria-disabled={Boolean(unavailable)}>
+        <fieldset disabled={Boolean(unavailable)}>
         {fields.map(([key, label]) => (
           <div className="field" key={key}>
             <label htmlFor={key}>{label}</label>
@@ -264,7 +286,8 @@ export default function Registro() {
             <option value="desechables">Desechables</option>
           </select>
         </div>
-        <button disabled={busy}>{busy ? "Registrando…" : "Registrarme"}</button>
+        <button disabled={busy || unavailable}>{busy ? "Registrando…" : "Registrarme"}</button>
+        </fieldset>
       </form>
     </main>
   );

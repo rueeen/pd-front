@@ -11,6 +11,13 @@ export default function AdminTorneo() {
   const [openMatch, setOpenMatch] = useState(null);
   const [onlyAccredited, setOnlyAccredited] = useState(false);
   const [dialog, setDialog] = useState(null);
+  const [capacityForm, setCapacityForm] = useState({
+    cupo_equipos: "",
+    cierre_inscripciones: "",
+  });
+  const [capacityError, setCapacityError] = useState("");
+  const [warning, setWarning] = useState("");
+  const [promoted, setPromoted] = useState([]);
 
   const load = useCallback(() => {
     setError("");
@@ -30,6 +37,11 @@ export default function AdminTorneo() {
           );
         }
         setData(next);
+        setCapacityForm({
+          cupo_equipos: next.cupo_equipos ?? next.cupo ?? "",
+          cierre_inscripciones:
+            next.cierre_inscripciones ?? next.plazo_cierre_inscripciones ?? "",
+        });
       })
       .catch((requestError) => {
         console.error("No se pudo cargar el torneo.", requestError);
@@ -37,6 +49,32 @@ export default function AdminTorneo() {
         setError("No se pudo cargar el torneo.");
       });
   }, [slug]);
+
+  async function saveCapacity(event) {
+    event.preventDefault();
+    setCapacityError("");
+    setWarning("");
+    try {
+      const { data: response } = await api.patch(
+        `/api/admin/torneos/${slug}/`,
+        {
+          cupo_equipos: Number(capacityForm.cupo_equipos),
+          cierre_inscripciones: capacityForm.cierre_inscripciones || null,
+        },
+      );
+      setWarning(response.advertencia || "");
+      setPromoted(
+        response.equipos_promovidos || response.promovidos || [],
+      );
+      await load();
+    } catch (requestError) {
+      console.error("No se pudo actualizar el cupo del torneo.", requestError);
+      setCapacityError(
+        requestError.response?.data?.detail ||
+          "No se pudo actualizar el cupo del torneo.",
+      );
+    }
+  }
 
   useEffect(() => {
     load();
@@ -169,6 +207,10 @@ export default function AdminTorneo() {
 
   const confirmed = data?.equipos_confirmados || [];
   const accredited = confirmed.filter((team) => team.acreditado).length;
+  const drawn =
+    data?.sorteado === true ||
+    data?.estado === "sorteado" ||
+    (data?.rondas || []).some((round) => round.partidas.length > 0);
   return (
     <main className="admin-page">
       <p className="eyebrow">Coordinación</p>
@@ -177,6 +219,20 @@ export default function AdminTorneo() {
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+
+      {promoted.length > 0 && (
+        <section className="promotion-notice" role="status">
+          <h2>Equipos promovidos</h2>
+          <p>Avísales por WhatsApp que ya entraron al torneo:</p>
+          <ul>
+            {promoted.map((team) => (
+              <li key={team.id || team.nombre}>
+                <strong>{team.nombre}</strong> — Capitán: {team.capitan?.nombre || team.capitan_nombre || "Por definir"}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className="accreditation">
@@ -241,6 +297,39 @@ export default function AdminTorneo() {
             </details>
           ))}
         </div>
+        <form className="config-form" onSubmit={saveCapacity}>
+          <h3>Cupo e inscripciones</h3>
+          {warning && <p className="warning" role="status">{warning}</p>}
+          <div className="inline-fields">
+            <div className="field">
+              <label htmlFor="tournament-capacity">Cupo de equipos</label>
+              <input
+                id="tournament-capacity"
+                type="number"
+                min="1"
+                required
+                disabled={drawn}
+                value={capacityForm.cupo_equipos}
+                aria-invalid={Boolean(capacityError)}
+                onChange={(event) => setCapacityForm({ ...capacityForm, cupo_equipos: event.target.value })}
+              />
+              {capacityError && <p className="error" role="alert">{capacityError}</p>}
+            </div>
+            <div className="field">
+              <label htmlFor="registration-deadline">Cierre de inscripciones</label>
+              <input
+                id="registration-deadline"
+                type="datetime-local"
+                value={capacityForm.cierre_inscripciones?.slice(0, 16) || ""}
+                onChange={(event) => setCapacityForm({ ...capacityForm, cierre_inscripciones: event.target.value })}
+              />
+            </div>
+          </div>
+          {drawn && (
+            <p className="submit-hint">El cupo no se puede editar mientras el torneo esté sorteado. Primero despublica la llave.</p>
+          )}
+          <button type="submit" disabled={!data}>Guardar cupo y plazo</button>
+        </form>
         <div className="draw-controls">
           <label className="checkbox">
             <input
