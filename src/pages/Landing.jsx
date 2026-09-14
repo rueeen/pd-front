@@ -171,7 +171,7 @@ export default function Landing() {
           <p>
             <span aria-hidden="true">◷</span>
             <small>Horario</small>
-            <strong>11:00 a 16:00</strong>
+            <strong>10:00 a 16:00</strong>
           </p>
           <p>
             <span aria-hidden="true">⌖</span>

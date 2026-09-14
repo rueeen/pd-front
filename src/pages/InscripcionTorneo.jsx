@@ -10,6 +10,32 @@ const emptyMembers = (amount) =>
     status: "idle",
   }));
 
+function errorText(value) {
+  if (Array.isArray(value)) return value.map(errorText).filter(Boolean).join(" ");
+  if (value && typeof value === "object") {
+    return errorText(value.detail || value.mensaje || value.message || Object.values(value));
+  }
+  return typeof value === "string" ? value : "";
+}
+
+function blockConflictErrors(data, members) {
+  const conflicts = data.conflictos_bloque || data.conflictos ||
+    (data.rut ? [{ rut: data.rut, detail: data.detail }] : []);
+  const candidates = Array.isArray(conflicts) ? conflicts : [conflicts];
+  const detail = errorText(data.detail);
+  return members.map((member) => {
+    const rut = limpiarRut(member.rut);
+    const conflict = candidates.find((item) =>
+      limpiarRut(item?.rut || "") === rut,
+    );
+    const message = errorText(conflict);
+    if (message) return message;
+    return detail && limpiarRut(detail).includes(rut)
+      ? detail
+      : "";
+  });
+}
+
 export default function InscripcionTorneo() {
   const { slug } = useParams();
   const [tournament, setTournament] = useState();
@@ -50,6 +76,16 @@ export default function InscripcionTorneo() {
       ? `Falta validar ${incomplete} ${incomplete === 1 ? "integrante" : "integrantes"}.`
       : "";
   }, [individual, members.length, team, validMembers]);
+  const sharedBlockNotice =
+    tournament?.advertencia_bloque || tournament?.mensaje_bloque_compartido;
+  const otherTournaments =
+    tournament?.torneos_mismo_bloque || tournament?.torneos_en_bloque || [];
+  const otherTournamentName =
+    tournament?.torneo_en_conflicto?.nombre ||
+    tournament?.torneo_en_conflicto ||
+    tournament?.bloque_compartido?.otro_torneo ||
+    tournament?.bloque_compartido?.torneo ||
+    otherTournaments.map((item) => item.nombre || item).join(" y ");
 
   function updateMember(index, key, value) {
     setMembers((current) =>
@@ -121,10 +157,16 @@ export default function InscripcionTorneo() {
     } catch (error) {
       console.error("No pudimos completar la inscripción.", error);
       const data = error.response?.data || {};
+      const conflictErrors = blockConflictErrors(data, members);
+      const hasBlockConflict = conflictErrors.some(Boolean);
       setErrors({
         general:
-          data.detail || data.non_field_errors?.[0] || "Revisa los datos.",
-        integrantes: data.integrantes || data.errores_integrantes || [],
+          hasBlockConflict
+            ? ""
+            : errorText(data.detail || data.non_field_errors) || "Revisa los datos.",
+        integrantes: hasBlockConflict
+          ? conflictErrors.map((message) => message && ({ rut: message }))
+          : data.integrantes || data.errores_integrantes || [],
       });
     } finally {
       setBusy(false);
@@ -153,6 +195,12 @@ export default function InscripcionTorneo() {
   return (
     <main>
       <h1>{tournament?.nombre || "Inscripción"}</h1>
+      {(sharedBlockNotice || tournament?.bloque_compartido || tournament?.torneo_en_conflicto || otherTournaments.length > 0) && (
+        <p className="warning shared-block-warning">
+          <strong>Horario compartido.</strong>{" "}
+          {sharedBlockNotice || <>Este torneo se juega a la misma hora que {otherTournamentName}. No se puede competir en los dos.</>}
+        </p>
+      )}
       <div className="tournament-signup-layout">
         <form className="team-form" onSubmit={submit}>
           {!individual && (

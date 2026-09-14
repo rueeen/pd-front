@@ -54,11 +54,19 @@ export default function AdminTorneo() {
     event.preventDefault();
     setCapacityError("");
     setWarning("");
+    const nextCapacity = Number(capacityForm.cupo_equipos);
+    const currentCapacity = Number(data?.cupo_equipos ?? data?.cupo ?? 0);
+    if (nextCapacity < currentCapacity) {
+      setCapacityError(
+        "El cupo solo se puede ampliar. Para sacar equipos, dales de baja uno a uno.",
+      );
+      return;
+    }
     try {
       const { data: response } = await api.patch(
         `/api/admin/torneos/${slug}/`,
         {
-          cupo_equipos: Number(capacityForm.cupo_equipos),
+          cupo_equipos: nextCapacity,
           cierre_inscripciones: capacityForm.cierre_inscripciones || null,
         },
       );
@@ -118,6 +126,21 @@ export default function AdminTorneo() {
       console.error("No se pudo sortear la llave.", requestError);
       setError(
         requestError.response?.data?.detail || "No se pudo sortear la llave.",
+      );
+    }
+  }
+
+  async function changeTournamentState(action) {
+    setDialog(null);
+    setError("");
+    try {
+      await api.post(`/api/admin/torneos/${slug}/${action}/`);
+      await load();
+    } catch (requestError) {
+      console.error("No se pudo cambiar el estado del torneo.", requestError);
+      setError(
+        requestError.response?.data?.detail ||
+          "No se pudo cambiar el estado del torneo.",
       );
     }
   }
@@ -211,10 +234,30 @@ export default function AdminTorneo() {
     data?.sorteado === true ||
     data?.estado === "sorteado" ||
     (data?.rondas || []).some((round) => round.partidas.length > 0);
+  const state = data?.estado || "inscripcion";
+  const acceptingRegistrations = state === "inscripcion";
+  const closed = state === "cerrado";
+  const stateLabels = {
+    inscripcion: "Inscripciones abiertas",
+    cerrado: "Inscripciones cerradas",
+    sorteado: "Llave sorteada",
+    en_curso: "En curso",
+    finalizado: "Finalizado",
+  };
   return (
     <main className="admin-page">
-      <p className="eyebrow">Coordinación</p>
-      <h1>{data?.torneo || "Administrar torneo"}</h1>
+      <header className="admin-tournament-header">
+        <div>
+          <p className="eyebrow">Coordinación</p>
+          <h1>{data?.torneo || "Administrar torneo"}</h1>
+        </div>
+        {data && (
+          <p className={`admin-state admin-state-${state}`}>
+            <span>Estado actual</span>
+            <strong>{stateLabels[state] || state}</strong>
+          </p>
+        )}
+      </header>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -223,7 +266,12 @@ export default function AdminTorneo() {
 
       {promoted.length > 0 && (
         <section className="promotion-notice" role="status">
-          <h2>Equipos promovidos</h2>
+          <div className="section-heading">
+            <h2>Equipos promovidos</h2>
+            <button className="secondary" type="button" onClick={() => setPromoted([])}>
+              Descartar aviso
+            </button>
+          </div>
           <p>Avísales por WhatsApp que ya entraron al torneo:</p>
           <ul>
             {promoted.map((team) => (
@@ -297,7 +345,7 @@ export default function AdminTorneo() {
             </details>
           ))}
         </div>
-        <form className="config-form" onSubmit={saveCapacity}>
+        {(acceptingRegistrations || closed) && <form className="config-form" onSubmit={saveCapacity}>
           <h3>Cupo e inscripciones</h3>
           {warning && <p className="warning" role="status">{warning}</p>}
           <div className="inline-fields">
@@ -306,41 +354,54 @@ export default function AdminTorneo() {
               <input
                 id="tournament-capacity"
                 type="number"
-                min="1"
+                min={data?.cupo_equipos ?? data?.cupo ?? 1}
                 required
-                disabled={drawn}
+                disabled={closed}
                 value={capacityForm.cupo_equipos}
                 aria-invalid={Boolean(capacityError)}
                 onChange={(event) => setCapacityForm({ ...capacityForm, cupo_equipos: event.target.value })}
               />
               {capacityError && <p className="error" role="alert">{capacityError}</p>}
+              {closed && (
+                <p className="submit-hint">Reabre las inscripciones para ampliar el cupo.</p>
+              )}
             </div>
             <div className="field">
               <label htmlFor="registration-deadline">Cierre de inscripciones</label>
               <input
                 id="registration-deadline"
                 type="datetime-local"
+                disabled={closed}
                 value={capacityForm.cierre_inscripciones?.slice(0, 16) || ""}
                 onChange={(event) => setCapacityForm({ ...capacityForm, cierre_inscripciones: event.target.value })}
               />
             </div>
           </div>
-          {drawn && (
-            <p className="submit-hint">El cupo no se puede editar mientras el torneo esté sorteado. Primero despublica la llave.</p>
-          )}
-          <button type="submit" disabled={!data}>Guardar cupo y plazo</button>
-        </form>
+          {acceptingRegistrations && <button type="submit" disabled={!data}>Guardar cupo y plazo</button>}
+        </form>}
         <div className="draw-controls">
-          <label className="checkbox">
+          {closed && <label className="checkbox">
             <input
               type="checkbox"
               checked={onlyAccredited}
               onChange={(event) => setOnlyAccredited(event.target.checked)}
             />{" "}
             Sortear solo con equipos acreditados
-          </label>
-          <button
-            disabled={!data || data.estado === "finalizado"}
+          </label>}
+          {acceptingRegistrations && (
+            <button
+              type="button"
+              onClick={() => setDialog({
+                type: "close",
+                title: "¿Cerrar las inscripciones?",
+                text: "Nadie más podrá inscribirse. Podrás reabrirlas antes de sortear si alguien alcanza a pedir un cupo.",
+              })}
+            >
+              Cerrar inscripciones
+            </button>
+          )}
+          {(acceptingRegistrations || closed) && <button
+            disabled={!closed}
             onClick={() =>
               setDialog({
                 type: "draw",
@@ -350,7 +411,28 @@ export default function AdminTorneo() {
             }
           >
             Sortear llave
-          </button>
+          </button>}
+          {acceptingRegistrations && (
+            <p className="submit-hint">Primero debes cerrar las inscripciones para sortear la llave.</p>
+          )}
+          {closed && (
+            <button className="secondary" type="button" onClick={() => changeTournamentState("reabrir-inscripciones")}>
+              Reabrir inscripciones
+            </button>
+          )}
+          {drawn && (
+            <button
+              className="secondary danger"
+              type="button"
+              onClick={() => setDialog({
+                type: "unpublish",
+                title: "¿Despublicar la llave?",
+                text: "Se eliminará la llave y sus resultados para poder rehacer el proceso.",
+              })}
+            >
+              Despublicar llave
+            </button>
+          )}
         </div>
       </section>
 
@@ -397,7 +479,11 @@ export default function AdminTorneo() {
                 onClick={
                   dialog.type === "draw"
                     ? draw
-                    : () => submitResult(dialog.match, dialog.payload)
+                    : dialog.type === "close"
+                      ? () => changeTournamentState("cerrar-inscripciones")
+                      : dialog.type === "unpublish"
+                        ? () => changeTournamentState("despublicar-llave")
+                        : () => submitResult(dialog.match, dialog.payload)
                 }
               >
                 Sí, continuar
