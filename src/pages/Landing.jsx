@@ -74,8 +74,15 @@ function RevealSections() {
 
 export default function Landing() {
   const [tournaments, setTournaments] = useState([]);
+  const [configuration, setConfiguration] = useState();
   const [error, setError] = useState("");
   useEffect(() => {
+    api
+      .get("/api/configuracion/")
+      .then(({ data }) => setConfiguration(data))
+      .catch((requestError) =>
+        console.error("No pudimos cargar la disponibilidad.", requestError),
+      );
     api
       .get("/api/torneos/")
       .then((response) => {
@@ -92,6 +99,13 @@ export default function Landing() {
         setError("No pudimos cargar los torneos en este momento.");
       });
   }, []);
+  const soldOut =
+    configuration &&
+    (!configuration.registro_abierto || configuration.cupos_disponibles <= 0);
+  const lowAvailability =
+    configuration &&
+    configuration.cupos_disponibles > 0 &&
+    configuration.cupos_disponibles < configuration.cupo_asistentes * 0.2;
   return (
     <div className="landing">
       <RevealSections />
@@ -121,9 +135,11 @@ export default function Landing() {
             compartir en comunidad.
           </p>
           <div className="actions hero-item">
-            <Link className="button" to="/registro">
-              Registrarme al evento
-            </Link>
+            {!soldOut && (
+              <Link className="button" to="/registro">
+                Registrarme al evento
+              </Link>
+            )}
             <Link className="button secondary" to="/mi-pase">
               Abrir mi pase
             </Link>
@@ -131,6 +147,17 @@ export default function Landing() {
               Ver torneos
             </a>
           </div>
+          {configuration && !soldOut && (
+            <p className={`hero-availability ${lowAvailability ? "low" : ""}`}>
+              <strong>{configuration.cupos_disponibles}</strong> cupos disponibles
+            </p>
+          )}
+          {soldOut && (
+            <div className="notice availability-closed" role="status">
+              <p>{configuration.mensaje_cupos_agotados}</p>
+              <Link to="/mi-pase">Ya me inscribí: abrir mi pase</Link>
+            </div>
+          )}
         </div>
         <aside
           className="event-info hero-item"

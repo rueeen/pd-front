@@ -78,6 +78,9 @@ export default function AdminPanel() {
       </div>
       <h2>Accesos</h2>
       <div className="actions">
+        <Link className="button secondary" to="/admin/configuracion">
+          Configuración del evento
+        </Link>
         <Link className="button" to="/admin/escaner">
           Abrir escáner
         </Link>
