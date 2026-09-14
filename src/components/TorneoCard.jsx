@@ -23,12 +23,11 @@ export default function TorneoCard({ t }) {
       </p>
       <p>{modes[t.modalidad] ?? t.modalidad}</p>
       <strong className="availability">{t.cupos_disponibles} cupos disponibles</strong>
-      <Link
-        className="button secondary"
-        to={`/torneos/${t.slug}/${t.inscripciones_abiertas ? "inscripcion" : "llave"}`}
-      >
-        {t.inscripciones_abiertas ? "Inscribirme" : "Ver llave"}
-      </Link>
+      <span className="tournament-status">{t.estado === "finalizado" ? "Finalizado" : t.estado === "en_curso" ? "En curso" : t.inscripciones_abiertas ? "Inscripciones abiertas" : "Pendiente de sorteo"}</span>
+      <div className="card-actions">
+        {t.inscripciones_abiertas && <Link className="button" to={`/torneos/${t.slug}/inscripcion`}>Inscribirme</Link>}
+        {!t.inscripciones_abiertas && <Link className="button secondary" to={`/torneos/${t.slug}/llave`}>Ver llave</Link>}
+      </div>
     </article>
   );
 }

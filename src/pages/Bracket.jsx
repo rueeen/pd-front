@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import BracketLlave from "../components/BracketLlave";
 export default function Bracket() {
@@ -28,23 +28,34 @@ export default function Bracket() {
   }, [slug]);
   useEffect(load, [load]);
   return (
-    <main>
-      <h1>Llave del torneo</h1>
-      <button onClick={load}>Recargar llave</button>
+    <main className="bracket-page">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">Eliminación directa</p>
+          <h1>{d?.torneo || d?.nombre || "Llave del torneo"}</h1>
+          <div className="tournament-meta">
+            {d?.horario && <span>Bloque {d.horario}</span>}
+            <strong>{d?.estado === "finalizado" ? "Finalizado" : d?.rondas?.length ? "En curso" : "Pendiente de sorteo"}</strong>
+          </div>
+        </div>
+        <div className="actions">
+          <Link className="button secondary" to="/torneos">Todos los torneos</Link>
+          <button className="secondary" onClick={load}>Recargar llave</button>
+        </div>
+      </header>
       {e && <p className="error">{e}</p>}
       {d?.rondas?.length ? (
         <BracketLlave rondas={d.rondas} />
       ) : (
         d && (
-          <section>
+          <section className="pending-bracket">
             <h2>El sorteo aún no se realiza</h2>
-            <p>Bloque: {d.horario}</p>
             <h3>Equipos inscritos</h3>
-            <ul>
+            <div className="registered-teams">
               {d.equipos_confirmados.map((x) => (
-                <li key={x.id}>{x.nombre}</li>
+                <article className="card" key={x.id}><strong>{x.nombre}</strong></article>
               ))}
-            </ul>
+            </div>
           </section>
         )
       )}
