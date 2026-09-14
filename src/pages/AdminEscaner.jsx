@@ -6,6 +6,10 @@ export default function AdminEscaner() {
   const video = useRef();
   const controls = useRef();
   const lock = useRef(false);
+  const lookupSource = useRef();
+  const flashTimer = useRef();
+  const mounted = useRef(true);
+  const deniedRef = useRef(false);
   const [camera, setCamera] = useState(false);
   const [denied, setDenied] = useState(false);
   const [code, setCode] = useState("");
@@ -14,7 +18,14 @@ export default function AdminEscaner() {
   const [flash, setFlash] = useState();
   const [delivering, setDelivering] = useState(false);
 
-  useEffect(() => () => controls.current?.stop(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(flashTimer.current);
+      controls.current?.stop();
+    };
+  }, []);
   function extract(text) {
     try {
       return (
@@ -24,13 +35,14 @@ export default function AdminEscaner() {
       return text.trim();
     }
   }
-  async function lookup(raw) {
+  async function lookup(raw, source) {
     if (lock.current) return;
     lock.current = true;
     setError("");
     try {
       const codigo = extract(raw);
       const response = await api.get(`/api/admin/asistentes/${codigo}/`);
+      lookupSource.current = source;
       setPerson({ ...response.data, codigo });
       controls.current?.stop();
       setCamera(false);
@@ -40,20 +52,28 @@ export default function AdminEscaner() {
     }
   }
   async function start() {
+    deniedRef.current = false;
     setDenied(false);
     setError("");
     lock.current = false;
     try {
       setCamera(true);
       const reader = new BrowserQRCodeReader();
-      controls.current = await reader.decodeFromVideoDevice(
+      const nextControls = await reader.decodeFromVideoDevice(
         undefined,
         video.current,
         (result) => {
-          if (result) lookup(result.getText());
+          if (result) lookup(result.getText(), "camera");
         },
       );
+      if (!mounted.current) {
+        nextControls.stop();
+        return;
+      }
+      controls.current = nextControls;
     } catch {
+      if (!mounted.current) return;
+      deniedRef.current = true;
       setDenied(true);
       setCamera(false);
     }
@@ -78,11 +98,13 @@ export default function AdminEscaner() {
           "No pudimos registrar la entrega. Revisa la conexión e intenta de nuevo.",
       });
     } finally {
-      setTimeout(() => {
+      flashTimer.current = setTimeout(() => {
+        if (!mounted.current) return;
         setFlash(null);
         setPerson(null);
         setDelivering(false);
         lock.current = false;
+        if (lookupSource.current === "camera" && !deniedRef.current) start();
       }, 3000);
     }
   }
@@ -104,7 +126,7 @@ export default function AdminEscaner() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          lookup(code);
+          lookup(code, "manual");
         }}
       >
         <div className="field">

@@ -17,9 +17,13 @@ Configura `VITE_API_URL` con la URL del backend, sin una barra final. Para produ
 ## Build
 
 ```bash
+npm ci
 npm run build
 npm run preview
 ```
+
+El lockfile debe generarse siempre con npm. La verificación reproducible de una
+entrega se realiza con `npm ci` antes de ejecutar la build de producción.
 
 ## Despliegue en Netlify
 
