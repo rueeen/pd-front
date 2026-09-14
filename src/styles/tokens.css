@@ -14,6 +14,11 @@
 * {
   box-sizing: border-box;
 }
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
 body {
   margin: 0;
 }
@@ -103,6 +108,13 @@ main {
 }
 .hero p {
   margin: 0 auto 1.6rem;
+}
+.event-banner {
+  width: calc(100% - 2rem);
+  max-width: 1120px;
+  aspect-ratio: 5 / 2;
+  margin: 0 auto;
+  border-radius: 14px;
 }
 .pixel-grid {
   width: min(82vw, 450px);

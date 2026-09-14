@@ -4,6 +4,7 @@ import api from "../api";
 import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
+import banner from "../img/banner-dia-programador-2026.svg?no-inline";
 const glyph = [
   "111011101110",
   "001010001000",
@@ -51,6 +52,13 @@ export default function Landing() {
           Registrarme al evento
         </Link>
       </section>
+      <img
+        className="event-banner"
+        src={banner}
+        alt="Día del Programador 2026: sábado 3 de octubre, de 11:00 a 16:00, en el patio central de INACAP Sede Arica"
+        loading="lazy"
+        decoding="async"
+      />
       <CuentaRegresiva />
       <section className="section alt">
         <h2>¿Qué celebramos?</h2>
