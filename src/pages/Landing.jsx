@@ -124,7 +124,7 @@ export default function Landing() {
           ))}
         </div>
         <div className="hero-copy">
-          <p className="eyebrow hero-item">Sede Arica</p>
+          <p className="eyebrow hero-item">INACAP · Sede Arica</p>
           <h1 className="hero-item">
             Día del
             <br />
@@ -176,7 +176,10 @@ export default function Landing() {
           <p>
             <span aria-hidden="true">⌖</span>
             <small>Lugar</small>
-            <strong>Patio central</strong>
+            <strong>
+              Patio central, INACAP Sede Arica
+              <span className="event-address">Avenida Santa María 2190</span>
+            </strong>
           </p>
         </aside>
       </section>
@@ -217,9 +220,11 @@ export default function Landing() {
         <p className="eyebrow">Alimentación</p>
         <h2>Recarga energías</h2>
         <p>
-          El registro es gratuito. Cada persona recibe{" "}
-          <strong>dos completos</strong> presentando su QR. Si quieres, puedes
-          hacer un aporte colaborativo; es completamente opcional.
+          INACAP aporta la base de la alimentación, y cada persona registrada
+          retira sus completos presentando el QR de su pase. Quien quiera puede
+          llevar un aporte colaborativo —bebidas, snacks, galletas o
+          desechables— para que alcance para más. Es opcional y no condiciona
+          nada.
         </p>
       </section>
       <section className="section alt reveal" id="preguntas">
@@ -239,9 +244,40 @@ export default function Landing() {
           ))}
         </div>
       </section>
-      <footer>
-        <strong>Día del Programador 2026</strong>
-        <span>INACAP Sede Arica · Sábado 3 de octubre</span>
+      <footer className="site-footer">
+        <div className="footer-columns">
+          <section>
+            <h2>El evento</h2>
+            <p>
+              Día del Programador 2026. Sábado 3 de octubre, de 10:00 a 16:00.
+              Patio central de la sede.
+            </p>
+          </section>
+          <section>
+            <h2>La sede</h2>
+            <p>INACAP Sede Arica. Avenida Santa María 2190, Arica.</p>
+            <a
+              href="https://portal.inacap.cl"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Portal INACAP
+            </a>
+          </section>
+          <section>
+            <h2>Organiza</h2>
+            <p>
+              Área de Informática, Ciberseguridad y Telecomunicaciones. Jornada
+              realizada con la colaboración de Diseño e Industria Digital y de
+              Automatización, Electrónica y Robótica, las otras dos áreas
+              convocadas.
+            </p>
+          </section>
+        </div>
+        <p className="footer-copyright">
+          © 2026 Ruben Valencia —{" "}
+          <a href="mailto:rvalencia@inacap.cl">rvalencia@inacap.cl</a>
+        </p>
       </footer>
     </div>
   );
