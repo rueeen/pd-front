@@ -87,6 +87,19 @@ export default function Pase() {
       </main>
     );
   const n = p.completos_disponibles;
+  const activeTournaments = (p.torneos || []).filter(
+    (t) => !["retirado", "cancelado"].includes(t.estado),
+  );
+  const blockKey = (t) =>
+    t.bloque_id || t.bloque_horario_id ||
+    (typeof t.bloque_horario === "object"
+      ? t.bloque_horario.id || t.bloque_horario.nombre
+      : t.bloque_horario);
+  const repeatedBlocks = new Set(
+    activeTournaments
+      .map(blockKey)
+      .filter((key, index, keys) => key && keys.indexOf(key) !== index),
+  );
   return (
     <main>
       <article className="pass pass-details">
@@ -156,6 +169,11 @@ export default function Pase() {
                         ? "✓ Confirmado"
                         : t.estado}
                   </p>
+                  {(t.conflicto_bloque || repeatedBlocks.has(blockKey(t))) && (
+                    <p className="warning block-conflict" role="alert">
+                      <strong>Conflicto de horario:</strong> estás inscrito en más de un torneo de este bloque. Resuélvelo con el coordinador.
+                    </p>
+                  )}
                   <h4>Compañeros</h4>
                   <ul className="pass-roster">
                     {(t.integrantes || t.equipo?.integrantes || []).map(
