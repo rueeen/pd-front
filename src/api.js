@@ -1,5 +1,11 @@
 import axios from "axios";
 
+export const RATE_LIMIT_MESSAGE =
+  "Hubo demasiados intentos. Espera unos minutos antes de volver a intentarlo.";
+export const RATE_LIMIT_EVENT = "api:rate-limit";
+export const apiErrorMessage = (error, fallback) =>
+  error.userMessage || error.response?.data?.detail || fallback;
+
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 
 if (!configuredApiUrl) {
@@ -42,6 +48,18 @@ api.interceptors.response.use(
     return response;
   },
   (e) => {
+    if (e.response?.status === 429) {
+      e.userMessage = RATE_LIMIT_MESSAGE;
+      e.response.data = {
+        ...(typeof e.response.data === "object" && e.response.data !== null
+          ? e.response.data
+          : {}),
+        detail: RATE_LIMIT_MESSAGE,
+      };
+      window.dispatchEvent(
+        new CustomEvent(RATE_LIMIT_EVENT, { detail: RATE_LIMIT_MESSAGE }),
+      );
+    }
     if (e.response?.status === 401) {
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");

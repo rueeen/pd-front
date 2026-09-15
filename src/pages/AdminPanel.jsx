@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 
 function SummaryTable({ title, rows, label }) {
   const normalized = Array.isArray(rows)
@@ -58,7 +58,7 @@ export default function AdminPanel() {
       .catch((requestError) => {
         console.error("No se pudo cargar el resumen.", requestError);
         setD(undefined);
-        setE("No se pudo cargar el resumen.");
+        setE(apiErrorMessage(requestError, "No se pudo cargar el resumen."));
       });
   }, []);
   return (

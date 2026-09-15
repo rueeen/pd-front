@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
 const emptyMembers = (amount) =>
@@ -54,7 +54,12 @@ export default function InscripcionTorneo() {
       })
       .catch((requestError) => {
         console.error("No pudimos cargar el torneo.", requestError);
-        setErrors({ general: "No pudimos cargar el torneo." });
+        setErrors({
+          general: apiErrorMessage(
+            requestError,
+            "No pudimos cargar el torneo.",
+          ),
+        });
       });
   }, [slug]);
 

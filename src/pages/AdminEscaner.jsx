@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader } from "@zxing/browser";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 
 export default function AdminEscaner() {
   const video = useRef();
@@ -17,6 +17,7 @@ export default function AdminEscaner() {
   const [error, setError] = useState("");
   const [flash, setFlash] = useState();
   const [delivering, setDelivering] = useState(false);
+  const [online, setOnline] = useState(() => navigator.onLine);
 
   useEffect(() => {
     mounted.current = true;
@@ -24,6 +25,16 @@ export default function AdminEscaner() {
       mounted.current = false;
       clearTimeout(flashTimer.current);
       controls.current?.stop();
+    };
+  }, []);
+  useEffect(() => {
+    const connectionRestored = () => setOnline(true);
+    const connectionLost = () => setOnline(false);
+    window.addEventListener("online", connectionRestored);
+    window.addEventListener("offline", connectionLost);
+    return () => {
+      window.removeEventListener("online", connectionRestored);
+      window.removeEventListener("offline", connectionLost);
     };
   }, []);
   function extract(text) {
@@ -48,7 +59,12 @@ export default function AdminEscaner() {
       setCamera(false);
     } catch (requestError) {
       console.error("No pudimos consultar el pase.", requestError);
-      setError("No encontramos ese pase. Revisa el código.");
+      setError(
+        apiErrorMessage(
+          requestError,
+          "No encontramos ese pase. Revisa el código.",
+        ),
+      );
       lock.current = false;
     }
   }
@@ -81,7 +97,7 @@ export default function AdminEscaner() {
     }
   }
   async function deliver(amount) {
-    if (delivering || lock.current === false) return;
+    if (!online || delivering || lock.current === false) return;
     setDelivering(true);
     try {
       await api.post("/api/admin/retiros/", {
@@ -114,6 +130,13 @@ export default function AdminEscaner() {
   return (
     <main className="scanner admin-page">
       <h1>Escáner de pases</h1>
+      <p
+        className={`connection-status ${online ? "online" : "offline"}`}
+        role="status"
+      >
+        <span aria-hidden="true" />
+        {online ? "Con conexión" : "Sin conexión"}
+      </p>
       {!camera && !person && <button onClick={start}>Activar cámara</button>}
       <video ref={video} playsInline muted autoPlay hidden={!camera} />
       {denied && (
@@ -158,18 +181,27 @@ export default function AdminEscaner() {
           </p>
           <div className="actions">
             <button
-              disabled={delivering || person.completos_disponibles < 1}
+              disabled={
+                !online || delivering || person.completos_disponibles < 1
+              }
               onClick={() => deliver(1)}
             >
               Entregar 1
             </button>
             <button
-              disabled={delivering || person.completos_disponibles < 2}
+              disabled={
+                !online || delivering || person.completos_disponibles < 2
+              }
               onClick={() => deliver(2)}
             >
               Entregar 2
             </button>
           </div>
+          {!online && (
+            <p className="offline-explanation" role="alert">
+              Espera a que vuelva la señal para registrar la entrega.
+            </p>
+          )}
         </section>
       )}
       {flash && (

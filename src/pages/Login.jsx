@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 export default function Login() {
   const [u, setU] = useState(""),
     [p, setP] = useState(""),
@@ -16,7 +16,12 @@ export default function Login() {
       nav(loc.state?.from?.pathname || "/admin", { replace: true });
     } catch (requestError) {
       console.error("No se pudo iniciar sesión.", requestError);
-      setE("Credenciales incorrectas. Revisa e intenta nuevamente.");
+      setE(
+        apiErrorMessage(
+          requestError,
+          "Credenciales incorrectas. Revisa e intenta nuevamente.",
+        ),
+      );
     }
   }
   return (

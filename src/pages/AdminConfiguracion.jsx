@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 
 const editableFields = [
   "cupo_asistentes",
@@ -28,7 +28,12 @@ export default function AdminConfiguracion() {
       setApplyExisting(false);
     } catch (requestError) {
       console.error("No se pudo cargar la configuración.", requestError);
-      setError("No se pudo cargar la configuración del evento.");
+      setError(
+        apiErrorMessage(
+          requestError,
+          "No se pudo cargar la configuración del evento.",
+        ),
+      );
     }
   }, []);
 
