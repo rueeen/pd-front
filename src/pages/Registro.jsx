@@ -160,7 +160,7 @@ export default function Registro() {
     } catch (error) {
       console.error("No pudimos completar el registro.", error);
       const responseErrors = error.response?.data;
-      if (error.response?.status === 403 && form.tipo === "estudiante") {
+      if (error.response?.status === 403) {
         setErrors({
           rut: responseErrors?.detail || "No pudimos completar el registro en esta etapa.",
           restriction: "Vuelve a intentarlo cuando se amplíen las inscripciones.",
@@ -208,7 +208,7 @@ export default function Registro() {
   const message = (key) =>
     Array.isArray(errors[key]) ? errors[key][0] : errors[key];
   const student = form.tipo === "estudiante";
-  const restricted = student && Boolean(configuration?.registro_restringido);
+  const restricted = Boolean(configuration?.registro_restringido);
   const restrictionNotice = restricted
     ? avisoEtapaRegistro(configuration)
     : "";

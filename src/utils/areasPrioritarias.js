@@ -19,15 +19,16 @@ export function avisoEtapaRegistro(configuration, { breve = false } = {}) {
   const nombres = nombresAreasPrioritarias(configuration);
   if (!nombres.length) {
     return breve
-      ? "Inscripciones en etapa de prioridad por carrera; se ampliarán más adelante."
-      : "Por ahora, las inscripciones están abiertas a un grupo de carreras y se ampliarán más adelante.";
+      ? "Inscripciones limitadas a las personas convocadas; se ampliarán más adelante."
+      : "El registro de esta etapa está limitado a las personas convocadas. Si no puedes inscribirte ahora, podrás hacerlo cuando se amplíen las inscripciones.";
   }
 
   const areas = unirConY(nombres);
   if (breve)
-    return `Inscripciones abiertas para ${areas}; se ampliarán más adelante.`;
+    return `Áreas prioritarias: ${areas}. Inscripciones limitadas a las personas convocadas; se ampliarán más adelante.`;
 
-  return nombres.length === 1
-    ? `En esta etapa, el registro está abierto al área ${areas} y se ampliará al resto más adelante.`
-    : `En esta etapa, el registro está abierto a las áreas ${areas} y se ampliará al resto más adelante.`;
+  const prioridad = nombres.length === 1
+    ? `El área prioritaria en esta etapa es ${areas}.`
+    : `Las áreas prioritarias en esta etapa son ${areas}.`;
+  return `${prioridad} El registro está limitado a las personas convocadas. Si no puedes inscribirte ahora, podrás hacerlo cuando se amplíen las inscripciones.`;
 }
