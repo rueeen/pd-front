@@ -4,3 +4,6 @@
 // Para revertir, cambiar a true. No borrar el código que envuelven.
 export const MOSTRAR_APORTE_COLABORATIVO = false;
 export const MOSTRAR_COMPLETOS = false;
+
+// Controla las referencias a premios sin alterar el resto del cronograma.
+export const MOSTRAR_PREMIOS = false;
