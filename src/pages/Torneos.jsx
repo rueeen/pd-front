@@ -22,7 +22,9 @@ export default function Torneos() {
   return (
     <main>
       <p className="eyebrow">Competencias</p><h1>Torneos</h1>
-      <p className="lead">Compite en Smash, VALORANT o League of Legends.</p>
+      <p className="lead">
+        Compite en Mario Kart, Smash, VALORANT o League of Legends.
+      </p>
       {e && <p className="error">{e}</p>}
       <div className="cards">
         {t.map((x) => (

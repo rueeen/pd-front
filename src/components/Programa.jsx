@@ -1,16 +1,19 @@
 const rows = [
-  ["08:00 – 09:45", "Traslado e instalación de los 24 equipos desde el laboratorio LEICA"],
-  ["09:45 – 10:00", "Acreditación de competidores"],
-  ["10:00 – 10:15", "Apertura oficial"],
-  ["10:15", [
-    ["10:15 – 11:10", "Torneo Super Smash Bros. Ultimate, en consolas"],
-    ["10:15 – 11:25", "Torneo VALORANT, en PC"],
+  ["09:40 – 10:30", "Acreditación de competidores"],
+  ["10:30 – 10:45", "Apertura oficial"],
+  ["10:45 – 11:00", "Prueba técnica y margen de inicio"],
+  ["11:00 – 12:10", [
+    ["11:00 – 12:10", "Torneo Mario Kart en consolas"],
+    ["11:00 – 12:10", "Torneo VALORANT en PC"],
   ]],
-  ["11:25 – 12:15", "Pausa de alimentación y dinámicas con premios"],
-  ["12:15 – 13:20", "Torneo League of Legends en modo ARAM, en PC"],
-  ["13:20 – 14:45", "Juego libre en consolas y PC, dinámicas abiertas"],
-  ["14:45 – 15:30", "Premiación"],
-  ["15:30 – 16:00", "Cierre oficial y fotografía grupal"],
+  ["12:10 – 13:10", "Pausa de alimentación y dinámicas con premios"],
+  ["13:10 – 14:25", [
+    ["13:10 – 14:25", "Torneo Super Smash Bros. en consolas"],
+    ["13:10 – 14:25", "Torneo League of Legends en PC"],
+  ]],
+  ["14:25 – 15:45", "Juego libre en consolas y PC, dinámicas abiertas"],
+  ["15:45 – 16:30", "Premiación"],
+  ["16:30 – 17:00", "Cierre oficial y fotografía grupal"],
 ];
 export default function Programa() {
   return (

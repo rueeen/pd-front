@@ -181,7 +181,12 @@ export default function Landing() {
           <p>
             <span aria-hidden="true">◷</span>
             <small>Horario</small>
-            <strong>10:00 a 16:00</strong>
+            <strong>
+              10:30 a 17:00
+              <span className="event-address">
+                Acreditación de competidores desde las 09:40
+              </span>
+            </strong>
           </p>
           <p>
             <span aria-hidden="true">⌖</span>
@@ -198,14 +203,14 @@ export default function Landing() {
       </div>
       <section className="section reveal" id="torneos">
         <p className="eyebrow">Competencias</p>
-        <h2>Los tres torneos</h2>
+        <h2>Los cuatro torneos</h2>
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
         {tournaments.length ? (
-          <div className="cards">
+          <div className="cards tournament-grid">
             {tournaments.map((tournament) => (
               <TorneoCard key={tournament.slug} t={tournament} />
             ))}
@@ -259,8 +264,9 @@ export default function Landing() {
           <section>
             <h2>El evento</h2>
             <p>
-              Día del Programador 2026. Sábado 3 de octubre, de 10:00 a 16:00.
-              Patio central de la sede.
+              Día del Programador 2026. Sábado 3 de octubre, de 10:30 a 17:00.
+              Acreditación de competidores desde las 09:40. Patio central de
+              la sede.
             </p>
           </section>
           <section>

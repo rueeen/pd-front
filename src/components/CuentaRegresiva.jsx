@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-const target = new Date("2026-10-03T10:00:00-03:00");
+const target = new Date("2026-10-03T10:30:00-03:00");
 function left() {
   const d = target - Date.now();
   return d <= 0
