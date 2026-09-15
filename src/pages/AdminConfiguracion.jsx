@@ -21,11 +21,10 @@ function phaseName(form) {
 }
 
 function Breakdown({ title, rows }) {
-  if (!rows?.length) return null;
   return (
     <section className="summary-block">
       <h3>{title}</h3>
-      <table>
+      {rows?.length ? <div className="table-scroll"><table>
         <thead><tr><th>Nombre</th><th>Alumnos</th></tr></thead>
         <tbody>
           {[...rows]
@@ -37,7 +36,7 @@ function Breakdown({ title, rows }) {
               </tr>
             ))}
         </tbody>
-      </table>
+      </table></div> : <p className="empty-state">Sin datos disponibles</p>}
     </section>
   );
 }
