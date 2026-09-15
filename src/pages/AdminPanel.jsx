@@ -18,7 +18,7 @@ function SummaryTable({ title, rows, label }) {
   return (
     <section className="summary-block">
       <h2>{title}</h2>
-      <table>
+      {normalized.length ? <div className="table-scroll"><table>
         <thead>
           <tr>
             <th>{label === "area" ? "Área" : "Carrera"}</th>
@@ -32,13 +32,8 @@ function SummaryTable({ title, rows, label }) {
               <td>{row.count}</td>
             </tr>
           ))}
-          {!normalized.length && (
-            <tr>
-              <td colSpan="2">Sin datos</td>
-            </tr>
-          )}
         </tbody>
-      </table>
+      </table></div> : <p className="empty-state">Sin datos disponibles</p>}
     </section>
   );
 }
@@ -77,7 +72,7 @@ export default function AdminPanel() {
         </div>
       </div>
       <h2>Accesos</h2>
-      <div className="actions">
+      <div className="admin-access-grid">
         <Link className="button secondary" to="/admin/configuracion">
           Configuración del evento
         </Link>
@@ -90,7 +85,7 @@ export default function AdminPanel() {
             key={t.slug}
             to={`/admin/torneos/${t.slug}`}
           >
-            {t.nombre}: {t.inscritos} inscritos
+            <span>{t.nombre}</span><small>{t.inscritos} inscritos</small>
           </Link>
         ))}
       </div>
@@ -106,14 +101,16 @@ export default function AdminPanel() {
           label="carrera"
         />
       </div>
-      <h2>Aportes comprometidos</h2>
-      <ul>
-        {Object.entries(d?.aportes_comprometidos || {}).map(([k, v]) => (
+      <section className="summary-block contributions-block">
+        <h2>Aportes comprometidos</h2>
+        {Object.keys(d?.aportes_comprometidos || {}).length ? <ul>
+        {Object.entries(d.aportes_comprometidos).map(([k, v]) => (
           <li key={k}>
             {k}: <strong>{v}</strong>
           </li>
         ))}
-      </ul>
+        </ul> : <p className="empty-state">No hay aportes comprometidos</p>}
+      </section>
     </main>
   );
 }
