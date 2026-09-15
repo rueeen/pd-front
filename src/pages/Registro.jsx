@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
+import { avisoEtapaRegistro } from "../utils/areasPrioritarias";
 import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
 const initialForm = {
@@ -207,6 +208,9 @@ export default function Registro() {
     Array.isArray(errors[key]) ? errors[key][0] : errors[key];
   const student = form.tipo === "estudiante";
   const restricted = student && Boolean(configuration?.registro_restringido);
+  const restrictionNotice = restricted
+    ? avisoEtapaRegistro(configuration)
+    : "";
   const selectedArea = areas.find((area) => area.slug === form.area);
   const careers = selectedArea?.carreras || [];
 
@@ -218,8 +222,7 @@ export default function Registro() {
       </p>
       {restricted && (
         <p className="notice restriction-notice" role="status">
-          Por ahora, las inscripciones están abiertas a un grupo de carreras y
-          se ampliarán más adelante.
+          {restrictionNotice}
         </p>
       )}
       {errors.general && <p className="error">{errors.general}</p>}
@@ -247,7 +250,12 @@ export default function Registro() {
             />
             {recoveredFields.has(key) && <small className="recovered-mark">Recuperado del padrón; puedes editarlo.</small>}
             {errors[key] && <p className="error">{message(key)}</p>}
-            {key === "rut" && errors.restriction && <p className="restriction-return">{errors.restriction}</p>}
+            {key === "rut" && errors.restriction && (
+              <p className="restriction-return">
+                {errors.restriction}{" "}
+                <Link to="/mi-pase">Si ya te registraste, abre tu pase.</Link>
+              </p>
+            )}
           </div>
         ))}
         <div className="field">
