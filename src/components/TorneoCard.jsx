@@ -12,8 +12,14 @@ export default function TorneoCard({ t }) {
     smash: "Combate en arena uno contra uno.",
     valorant: "Competencia táctica por equipos.",
     "lol-aram": "Estrategia por equipos en sala personalizada.",
+    "mario-kart": "Duelos uno contra uno al mejor de tres carreras.",
   };
-  const icons = { smash: "⚔", valorant: "⌖", "lol-aram": "◆" };
+  const icons = {
+    smash: "⚔",
+    valorant: "⌖",
+    "lol-aram": "◆",
+    "mario-kart": "◉",
+  };
   return (
     <article className="card">
       <span className="game-icon" aria-hidden="true">
