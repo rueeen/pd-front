@@ -8,6 +8,7 @@ const editableFields = [
   "completos_por_asistente",
   "mensaje_cupos_agotados",
   "registro_restringido",
+  "restriccion_todos_los_tipos",
   "areas_prioritarias",
 ];
 
@@ -16,6 +17,10 @@ const count = (value, ...keys) =>
 
 function phaseName(form) {
   if (!form?.registro_restringido) return "Abierto a todos";
+  if (form.restriccion_todos_los_tipos)
+    return form.areas_prioritarias?.length
+      ? "Prioridad por carrera; restricción para todos los tipos de asistente"
+      : "Solo personas del padrón; restricción para todos los tipos de asistente";
   return form.areas_prioritarias?.length
     ? "Prioridad por carrera"
     : "Solo alumnos del padrón";
@@ -260,7 +265,13 @@ export default function AdminConfiguracion() {
         <div className="section-heading"><div><p className="eyebrow">Registro por fases</p><h2 id="padron-title">Padrón de alumnos</h2></div><button type="button" className="secondary" disabled={busy} onClick={downloadTemplate}>Descargar plantilla</button></div>
         <p className="padron-status"><strong>{padronTotal}</strong> alumnos en el padrón <span>·</span> <strong>{registeredFromPadron}</strong> registrados provienen de él <span>·</span> Fase: <strong>{phaseName(form)}</strong></p>
         <label className="checkbox restriction-switch"><input type="checkbox" checked={Boolean(form.registro_restringido)} onChange={(event) => changeRestriction(event.target.checked)} />Restringir temporalmente el registro de estudiantes</label>
-        {form.registro_restringido && <fieldset className="priority-areas"><legend>Áreas prioritarias</legend><p>Sin áreas seleccionadas, podrán registrarse todos los alumnos incluidos en el padrón.</p>{areas.map((area) => <label className="checkbox" key={area.slug}><input type="checkbox" checked={form.areas_prioritarias.includes(area.slug)} onChange={() => toggleArea(area.slug)} />{area.nombre}</label>)}</fieldset>}
+        {form.registro_restringido && <>
+          <div className="all-types-restriction">
+            <label className="checkbox"><input name="restriccion_todos_los_tipos" type="checkbox" checked={Boolean(form.restriccion_todos_los_tipos)} onChange={change} />Exigir estar en el padrón también a docentes, funcionarios y externos</label>
+            <p>Para habilitar a alguien que no es alumno, agrégalo al padrón <strong>sin carrera</strong> desde el admin de Django; así quedará exento del filtro de áreas.</p>
+          </div>
+          <fieldset className="priority-areas"><legend>Áreas prioritarias</legend><p>Sin áreas seleccionadas, podrán registrarse todos los alumnos incluidos en el padrón.</p>{areas.map((area) => <label className="checkbox" key={area.slug}><input type="checkbox" checked={form.areas_prioritarias.includes(area.slug)} onChange={() => toggleArea(area.slug)} />{area.nombre}</label>)}</fieldset>
+        </>}
         <button type="button" disabled={busy} onClick={submit}>Guardar fase de registro</button>
 
         <form className="padron-upload" onSubmit={upload}>
