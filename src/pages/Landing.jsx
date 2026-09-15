@@ -4,6 +4,7 @@ import api, { apiErrorMessage } from "../api";
 import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
+import { avisoEtapaRegistro } from "../utils/areasPrioritarias";
 
 // Interruptor temporal para retirar esta sección cuando se confirmen las nuevas actividades.
 const MOSTRAR_NOVEDADES = true;
@@ -160,7 +161,7 @@ export default function Landing() {
               <p><strong>{configuration.cupos_disponibles}</strong> cupos disponibles</p>
               {configuration.registro_restringido && (
                 <p className="phase-note">
-                  Inscripciones en etapa de prioridad por carrera; se ampliarán más adelante.
+                  {avisoEtapaRegistro(configuration, { breve: true })}
                 </p>
               )}
             </div>
