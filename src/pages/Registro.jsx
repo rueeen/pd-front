@@ -23,6 +23,8 @@ export default function Registro() {
   const [areas, setAreas] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");
   const [configuration, setConfiguration] = useState();
+  const [recoveredFields, setRecoveredFields] = useState(new Set());
+  const [lastPadronRut, setLastPadronRut] = useState("");
   const navigate = useNavigate();
 
   const loadCatalog = useCallback(async (retry = true) => {
@@ -58,6 +60,32 @@ export default function Registro() {
     configuration &&
     (!configuration.registro_abierto || configuration.cupos_disponibles <= 0);
 
+  async function lookupPadron() {
+    if (form.tipo !== "estudiante" || !rutValido(form.rut)) return;
+    const rut = limpiarRut(form.rut);
+    if (rut === lastPadronRut) return;
+    setLastPadronRut(rut);
+    try {
+      const { data } = await api.get(`/api/padron/${encodeURIComponent(rut)}/`);
+      const recovered = {
+        nombre: data.nombre ?? "",
+        apellido: data.apellido ?? "",
+        area: data.area?.slug ?? data.area ?? "",
+        carrera: data.carrera?.slug ?? data.carrera ?? "",
+      };
+      const present = Object.keys(recovered).filter((key) => recovered[key]);
+      setForm((current) => ({ ...current, ...recovered }));
+      setRecoveredFields(new Set(present));
+      setErrors((current) => Object.fromEntries(
+        Object.entries(current).filter(([key]) => !present.includes(key)),
+      ));
+    } catch (requestError) {
+      setRecoveredFields(new Set());
+      if (requestError.response?.status !== 404)
+        console.error("No pudimos consultar el padrón.", requestError);
+    }
+  }
+
   const change = (event) => {
     const { name } = event.target;
     const value =
@@ -67,6 +95,17 @@ export default function Registro() {
       [name]: value,
       ...(name === "area" ? { carrera: "" } : {}),
     }));
+    if (["nombre", "apellido", "area", "carrera"].includes(name))
+      setRecoveredFields((current) => {
+        const next = new Set(current);
+        next.delete(name);
+        if (name === "area") next.delete("carrera");
+        return next;
+      });
+    if (name === "rut" || (name === "tipo" && value !== "estudiante")) {
+      setLastPadronRut("");
+      setRecoveredFields(new Set());
+    }
     setErrors((current) => {
       const next = { ...current, [name]: undefined };
       if (name === "area") next.carrera = undefined;
@@ -119,7 +158,12 @@ export default function Registro() {
     } catch (error) {
       console.error("No pudimos completar el registro.", error);
       const responseErrors = error.response?.data;
-      if (error.response?.status === 409) {
+      if (error.response?.status === 403 && form.tipo === "estudiante") {
+        setErrors({
+          rut: responseErrors?.detail || "No pudimos completar el registro en esta etapa.",
+          restriction: "Vuelve a intentarlo cuando se amplíen las inscripciones.",
+        });
+      } else if (error.response?.status === 409) {
         setErrors({
           capacity:
             responseErrors?.detail || "No pudimos completar el registro.",
@@ -162,6 +206,7 @@ export default function Registro() {
   const message = (key) =>
     Array.isArray(errors[key]) ? errors[key][0] : errors[key];
   const student = form.tipo === "estudiante";
+  const restricted = student && Boolean(configuration?.registro_restringido);
   const selectedArea = areas.find((area) => area.slug === form.area);
   const careers = selectedArea?.carreras || [];
 
@@ -171,6 +216,12 @@ export default function Registro() {
       <p className="lead">
         Registro gratuito. Al terminar recibirás tu pase con QR.
       </p>
+      {restricted && (
+        <p className="notice restriction-notice" role="status">
+          Por ahora, las inscripciones están abiertas a un grupo de carreras y
+          se ampliarán más adelante.
+        </p>
+      )}
       {errors.general && <p className="error">{errors.general}</p>}
       {(unavailable || errors.capacity) && (
         <div className="notice availability-closed" role="alert">
@@ -191,14 +242,17 @@ export default function Registro() {
               name={key}
               value={form[key]}
               onChange={change}
+              onBlur={key === "rut" ? lookupPadron : undefined}
               aria-invalid={Boolean(errors[key])}
             />
+            {recoveredFields.has(key) && <small className="recovered-mark">Recuperado del padrón; puedes editarlo.</small>}
             {errors[key] && <p className="error">{message(key)}</p>}
+            {key === "rut" && errors.restriction && <p className="restriction-return">{errors.restriction}</p>}
           </div>
         ))}
         <div className="field">
           <label htmlFor="tipo">Tipo de asistente</label>
-          <select id="tipo" name="tipo" value={form.tipo} onChange={change}>
+          <select id="tipo" name="tipo" value={form.tipo} onChange={change} onBlur={lookupPadron}>
             <option value="">Selecciona</option>
             <option value="estudiante">Estudiante</option>
             <option value="docente">Docente</option>
@@ -229,6 +283,7 @@ export default function Registro() {
             ))}
           </select>
           {errors.area && <p className="error">{message("area")}</p>}
+          {recoveredFields.has("area") && <small className="recovered-mark">Recuperado del padrón; puedes editarlo.</small>}
         </div>
         <div className="field">
           <label htmlFor="carrera">Carrera{student ? "" : " (opcional)"}</label>
@@ -250,6 +305,7 @@ export default function Registro() {
             ))}
           </select>
           {errors.carrera && <p className="error">{message("carrera")}</p>}
+          {recoveredFields.has("carrera") && <small className="recovered-mark">Recuperado del padrón; puedes editarlo.</small>}
         </div>
         {catalogStatus === "error" && (
           <div className="notice catalog-notice" role="alert">

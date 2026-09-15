@@ -153,9 +153,14 @@ export default function Landing() {
             </a>
           </div>
           {configuration && !soldOut && (
-            <p className={`hero-availability ${lowAvailability ? "low" : ""}`}>
-              <strong>{configuration.cupos_disponibles}</strong> cupos disponibles
-            </p>
+            <div className={`hero-availability ${lowAvailability ? "low" : ""}`}>
+              <p><strong>{configuration.cupos_disponibles}</strong> cupos disponibles</p>
+              {configuration.registro_restringido && (
+                <p className="phase-note">
+                  Inscripciones en etapa de prioridad por carrera; se ampliarán más adelante.
+                </p>
+              )}
+            </div>
           )}
           {soldOut && (
             <div className="notice availability-closed" role="status">
