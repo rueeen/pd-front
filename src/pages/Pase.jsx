@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import api, { apiErrorMessage } from "../api";
+import { MOSTRAR_COMPLETOS } from "../config/visibilidad";
 export default function Pase() {
   const { codigo } = useParams(),
     loc = useLocation(),
@@ -129,13 +130,17 @@ export default function Pase() {
           <QRCodeCanvas value={url} size={260} level="M" marginSize={1} />
         </div>
         <p className="pass-code">{codigo}</p>
-        <p className={`balance ${n === 1 ? "one" : n === 0 ? "none" : ""}`}>
+        <p>
+          Este es tu pase de acceso a la jornada. Presenta el QR o el código
+          para acreditarte en el evento.
+        </p>
+        {MOSTRAR_COMPLETOS && <p className={`balance ${n === 1 ? "one" : n === 0 ? "none" : ""}`}>
           {n === 2
             ? "2 completos disponibles"
             : n === 1
               ? "1 completo disponible"
               : "Ya retiraste tus 2 completos"}
-        </p>
+        </p>}
         <div className="actions">
           <button onClick={download}>Descargar QR</button>
           <button className="secondary" onClick={copyLink}>

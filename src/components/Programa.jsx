@@ -1,3 +1,5 @@
+import { MOSTRAR_COMPLETOS } from "../config/visibilidad";
+
 const rows = [
   ["09:40 – 10:30", "Acreditación de competidores"],
   ["10:30 – 10:45", "Apertura oficial"],
@@ -6,7 +8,12 @@ const rows = [
     ["11:00 – 12:10", "Torneo Mario Kart en consolas"],
     ["11:00 – 12:10", "Torneo VALORANT en PC"],
   ]],
-  ["12:10 – 13:10", "Pausa de alimentación y dinámicas con premios"],
+  [
+    "12:10 – 13:10",
+    MOSTRAR_COMPLETOS
+      ? "Pausa de alimentación y dinámicas con premios"
+      : "Pausa y dinámicas con premios",
+  ],
   ["13:10 – 14:25", [
     ["13:10 – 14:25", "Torneo Super Smash Bros. en consolas"],
     ["13:10 – 14:25", "Torneo League of Legends en PC"],
