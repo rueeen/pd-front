@@ -26,9 +26,11 @@ api.interceptors.response.use(
   (response) => {
     const requestPath = response.config.url || "";
     const contentType = response.headers["content-type"] || "";
+    const expectsBlob = response.config.responseType === "blob";
 
     if (
       requestPath.startsWith("/api/") &&
+      !expectsBlob &&
       !contentType.toLowerCase().includes("application/json")
     ) {
       const error = new axios.AxiosError(
