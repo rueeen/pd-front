@@ -5,6 +5,9 @@ import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
 
+// Interruptor temporal para retirar esta sección cuando se confirmen las nuevas actividades.
+const MOSTRAR_NOVEDADES = true;
+
 const glyph = [
   "111011101110",
   "001010001000",
@@ -230,6 +233,35 @@ export default function Landing() {
           toda la jornada.
         </p>
       </section>
+      {MOSTRAR_NOVEDADES && (
+        <section
+          className="section reveal novedades"
+          aria-labelledby="novedades-title"
+        >
+          <div className="novedades-heading">
+            <div>
+              <p className="eyebrow">Lo que viene</p>
+              <h2 id="novedades-title">Más novedades en camino</h2>
+            </div>
+            <span className="novedades-badge">Información preliminar</span>
+          </div>
+          <div className="novedades-copy">
+            <p>
+              Ya están confirmados cuatro torneos, juego libre durante toda la
+              jornada y premios.
+            </p>
+            <p>
+              Estamos coordinando actividades adicionales con agrupaciones
+              externas a la sede y las anunciaremos durante las próximas
+              semanas.
+            </p>
+            <p>
+              Regístrate ahora: los cupos son limitados y estas novedades no
+              cambian la fecha ni el lugar del evento.
+            </p>
+          </div>
+        </section>
+      )}
       <Programa />
       <section className="section reveal food">
         <p className="eyebrow">Alimentación</p>
