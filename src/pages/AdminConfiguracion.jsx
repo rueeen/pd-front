@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api, { apiErrorMessage } from "../api";
+import { MOSTRAR_COMPLETOS } from "../config/visibilidad";
 
 const editableFields = [
   "cupo_asistentes",
@@ -208,18 +209,18 @@ export default function AdminConfiguracion() {
       <p className="eyebrow">Administración</p>
       <h1>Configuración del evento</h1>
       {error && <p className="error" role="alert">{error}</p>}
-      <div className="stats" aria-label="Resumen de cupos y completos">
+      <div className="stats" aria-label={MOSTRAR_COMPLETOS ? "Resumen de cupos y completos" : "Resumen de cupos"}>
         <div className="stat"><b>{configuration?.registrados ?? configuration?.total_registrados ?? "—"}</b>Registrados</div>
         <div className="stat"><b>{configuration?.cupos_disponibles ?? "—"}</b>Cupos disponibles</div>
-        <div className="stat"><b>{configuration?.completos_comprometidos ?? "—"}</b>Completos comprometidos</div>
+        {MOSTRAR_COMPLETOS && <div className="stat"><b>{configuration?.completos_comprometidos ?? "—"}</b>Completos comprometidos</div>}
       </div>
       {form && (
         <form className="config-form" onSubmit={submit}>
           {belowRegistered && <p className="warning" role="status">El cupo queda por debajo de los asistentes registrados. Nadie será desinscrito y el registro quedará cerrado de hecho hasta que el cupo suba.</p>}
           <div className="field"><label htmlFor="cupo_asistentes">Cupo de asistentes</label><input id="cupo_asistentes" name="cupo_asistentes" type="number" min="0" required value={form.cupo_asistentes} onChange={change} /></div>
           <label className="checkbox"><input name="registro_abierto" type="checkbox" checked={Boolean(form.registro_abierto)} onChange={change} />Registro abierto</label>
-          <div className="field"><label htmlFor="completos_por_asistente">Completos por asistente</label><input id="completos_por_asistente" name="completos_por_asistente" type="number" min="0" required value={form.completos_por_asistente} onChange={change} /></div>
-          {completesChanged && <label className="checkbox"><input type="checkbox" checked={applyExisting} onChange={(event) => setApplyExisting(event.target.checked)} />Aplicar a los ya registrados</label>}
+          {MOSTRAR_COMPLETOS && <div className="field"><label htmlFor="completos_por_asistente">Completos por asistente</label><input id="completos_por_asistente" name="completos_por_asistente" type="number" min="0" required value={form.completos_por_asistente} onChange={change} /></div>}
+          {MOSTRAR_COMPLETOS && completesChanged && <label className="checkbox"><input type="checkbox" checked={applyExisting} onChange={(event) => setApplyExisting(event.target.checked)} />Aplicar a los ya registrados</label>}
           <div className="field"><label htmlFor="mensaje_cupos_agotados">Mensaje de cupos agotados</label><textarea id="mensaje_cupos_agotados" name="mensaje_cupos_agotados" required value={form.mensaje_cupos_agotados} onChange={change} /></div>
           <button disabled={busy}>{busy ? "Guardando…" : "Guardar configuración"}</button>
         </form>

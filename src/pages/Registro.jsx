@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api";
+import { MOSTRAR_APORTE_COLABORATIVO } from "../config/visibilidad";
 import { avisoEtapaRegistro } from "../utils/areasPrioritarias";
 import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 
@@ -335,7 +336,7 @@ export default function Registro() {
             </button>
           </div>
         )}
-        <div className="field">
+        {MOSTRAR_APORTE_COLABORATIVO && <div className="field">
           <label htmlFor="aporte">Aporte colaborativo opcional</label>
           <select
             id="aporte"
@@ -349,7 +350,7 @@ export default function Registro() {
             <option value="galletas">Galletas</option>
             <option value="desechables">Desechables</option>
           </select>
-        </div>
+        </div>}
         <button disabled={busy || unavailable}>{busy ? "Registrando…" : "Registrarme"}</button>
         </fieldset>
       </form>

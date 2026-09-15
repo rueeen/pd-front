@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api, { apiErrorMessage } from "../api";
+import {
+  MOSTRAR_APORTE_COLABORATIVO,
+  MOSTRAR_COMPLETOS,
+} from "../config/visibilidad";
 
 function SummaryTable({ title, rows, label }) {
   const normalized = Array.isArray(rows)
@@ -64,12 +68,12 @@ export default function AdminPanel() {
         <div className="stat">
           <b>{d?.total_registrados ?? "—"}</b>Registrados
         </div>
-        <div className="stat">
+        {MOSTRAR_COMPLETOS && <div className="stat">
           <b>{d?.completos_entregados ?? "—"}</b>Completos entregados
-        </div>
-        <div className="stat">
+        </div>}
+        {MOSTRAR_COMPLETOS && <div className="stat">
           <b>{d?.completos_pendientes ?? "—"}</b>Completos pendientes
-        </div>
+        </div>}
       </div>
       <h2>Accesos</h2>
       <div className="admin-access-grid">
@@ -101,7 +105,7 @@ export default function AdminPanel() {
           label="carrera"
         />
       </div>
-      <section className="summary-block contributions-block">
+      {MOSTRAR_APORTE_COLABORATIVO && <section className="summary-block contributions-block">
         <h2>Aportes comprometidos</h2>
         {Object.keys(d?.aportes_comprometidos || {}).length ? <ul>
         {Object.entries(d.aportes_comprometidos).map(([k, v]) => (
@@ -110,7 +114,7 @@ export default function AdminPanel() {
           </li>
         ))}
         </ul> : <p className="empty-state">No hay aportes comprometidos</p>}
-      </section>
+      </section>}
     </main>
   );
 }

@@ -4,6 +4,10 @@ import api, { apiErrorMessage } from "../api";
 import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
+import {
+  MOSTRAR_APORTE_COLABORATIVO,
+  MOSTRAR_COMPLETOS,
+} from "../config/visibilidad";
 import { avisoEtapaRegistro } from "../utils/areasPrioritarias";
 
 // Interruptor temporal para retirar esta sección cuando se confirmen las nuevas actividades.
@@ -38,7 +42,11 @@ const faqs = [
   ],
   [
     "¿Qué tengo que llevar?",
-    "Lleva tu pase QR y, si compites, lo necesario para acceder a tu cuenta de juego. El aporte de alimentos es opcional.",
+    `Lleva tu pase QR y, si compites, lo necesario para acceder a tu cuenta de juego.${
+      MOSTRAR_APORTE_COLABORATIVO
+        ? " El aporte de alimentos es opcional."
+        : ""
+    }`,
   ],
   [
     "¿Hasta cuándo puedo inscribirme?",
@@ -264,17 +272,19 @@ export default function Landing() {
         </section>
       )}
       <Programa />
-      <section className="section reveal food">
+      {MOSTRAR_COMPLETOS && <section className="section reveal food">
         <p className="eyebrow">Alimentación</p>
         <h2>Recarga energías</h2>
         <p>
           INACAP aporta la base de la alimentación, y cada persona registrada
-          retira sus completos presentando el QR de su pase. Quien quiera puede
-          llevar un aporte colaborativo —bebidas, snacks, galletas o
-          desechables— para que alcance para más. Es opcional y no condiciona
-          nada.
+          retira sus completos presentando el QR de su pase.
+          {MOSTRAR_APORTE_COLABORATIVO && (
+            <> Quien quiera puede llevar un aporte colaborativo —bebidas,
+              snacks, galletas o desechables— para que alcance para más. Es
+              opcional y no condiciona nada.</>
+          )}
         </p>
-      </section>
+      </section>}
       <section className="section alt reveal" id="preguntas">
         <p className="eyebrow">Antes de venir</p>
         <h2>Preguntas frecuentes</h2>
