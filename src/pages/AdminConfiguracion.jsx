@@ -56,6 +56,7 @@ export default function AdminConfiguracion() {
   const [file, setFile] = useState();
   const [uploadMode, setUploadMode] = useState("agregar");
   const [replacementText, setReplacementText] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [uploadResult, setUploadResult] = useState();
   const [emptyRestrictionConfirmed, setEmptyRestrictionConfirmed] = useState(false);
 
@@ -95,6 +96,7 @@ export default function AdminConfiguracion() {
   const completesChanged = form && Number(form.completos_por_asistente) !== Number(originalCompletes);
   const belowRegistered = form && Number(form.cupo_asistentes) < Number(configuration?.registrados ?? configuration?.total_registrados);
   const replacementConfirmed = replacementText.trim().toUpperCase() === "REEMPLAZAR";
+  const deleteConfirmed = deleteConfirmation.trim() === "BORRAR PADRON";
 
   async function save() {
     setDialog("");
@@ -185,7 +187,7 @@ export default function AdminConfiguracion() {
       const body = new FormData();
       body.append("archivo", file);
       body.append("modo", uploadMode);
-      const { data } = await api.post("/api/admin/padron/", body);
+      const { data } = await api.post("/api/admin/padron/cargar/", body);
       setUploadResult(data);
       setFile(undefined);
       setReplacementText("");
@@ -193,9 +195,36 @@ export default function AdminConfiguracion() {
       await load();
     } catch (requestError) {
       const data = requestError.response?.data;
-      if (data && typeof data === "object" && (data.errores || data.importados !== undefined))
+      if (requestError.response?.status === 400 && data && typeof data === "object" && (data.errores || data.importados !== undefined))
         setUploadResult(data);
-      else setError(apiErrorMessage(requestError, "No se pudo procesar el archivo."));
+      else {
+        const status = requestError.response?.status;
+        const statusLabel = status ? `HTTP ${status}` : "sin respuesta del servidor";
+        setError(`${apiErrorMessage(requestError, "No se pudo procesar el archivo.")} (${statusLabel})`);
+      }
+    } finally { setBusy(false); }
+  }
+
+  function openDeleteDialog() {
+    setDeleteConfirmation("");
+    setDialog("delete-padron");
+  }
+
+  async function deletePadron() {
+    if (!deleteConfirmed) return;
+    setBusy(true);
+    setError("");
+    try {
+      const { data } = await api.delete("/api/admin/padron/", {
+        data: { confirmacion: "BORRAR PADRON" },
+      });
+      setDialog("");
+      setDeleteConfirmation("");
+      setUploadResult(undefined);
+      setResult(data?.detail ?? "El padrón se vació correctamente.");
+      await load();
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError, "No se pudo vaciar el padrón."));
     } finally { setBusy(false); }
   }
 
@@ -247,10 +276,25 @@ export default function AdminConfiguracion() {
           <div className="upload-counts"><span><strong>{count(uploadResult, "importados", "creados")}</strong> importados</span><span><strong>{count(uploadResult, "actualizados")}</strong> actualizados</span><span><strong>{count(uploadResult, "omitidos")}</strong> omitidos</span></div>
           {uploadResult.errores?.length > 0 && <><div className="error-table-scroll"><table><thead><tr><th>Fila</th><th>RUT</th><th>Motivo</th></tr></thead><tbody>{uploadResult.errores.map((item, index) => <tr key={`${item.fila}-${index}`}><td>{item.fila}</td><td>{item.rut || "—"}</td><td>{item.motivo ?? item.error}</td></tr>)}</tbody></table></div>{count(uploadResult, "total_errores", "cantidad_errores") > uploadResult.errores.length && <p>Se muestran {uploadResult.errores.length} de {count(uploadResult, "total_errores", "cantidad_errores")} errores.</p>}</>}
         </section>}
+        <section className="padron-danger" aria-labelledby="empty-padron-title">
+          <h3 id="empty-padron-title">Vaciar padrón</h3>
+          <p>Elimina del sistema todos los RUT y correos almacenados en el padrón.</p>
+          {configuration?.registro_restringido && <p className="warning" role="status">Primero debes desactivar y guardar la restricción del registro.</p>}
+          <button type="button" className="secondary danger" disabled={busy || Boolean(configuration?.registro_restringido)} onClick={openDeleteDialog}>Vaciar el padrón completo</button>
+        </section>
         <div className="summary-tables"><Breakdown title="Alumnos por área" rows={breakdowns.areas} /><Breakdown title="Alumnos por carrera" rows={breakdowns.careers} /></div>
       </section>}
 
-      {dialog && <div className="dialog-backdrop" role="presentation"><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="config-dialog-title"><h2 id="config-dialog-title">{dialog === "empty-padron" ? "¿Restringir con el padrón vacío?" : "¿Actualizar todos los saldos?"}</h2><p>{dialog === "empty-padron" ? "Nadie podrá registrarse como estudiante hasta que cargues un archivo al padrón." : "Esta acción modifica el saldo de completos de todos los asistentes ya registrados."}</p><div className="actions"><button onClick={confirmDialog}>{dialog === "empty-padron" ? "Sí, activar restricción" : "Sí, guardar y actualizar"}</button><button className="secondary" onClick={() => setDialog("")}>Cancelar</button></div></section></div>}
+      {dialog && <div className="dialog-backdrop" role="presentation"><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="config-dialog-title">
+        {dialog === "delete-padron" ? <>
+          <h2 id="config-dialog-title">¿Vaciar el padrón completo?</h2>
+          <p>Esta acción elimina todos los RUT y correos del padrón y no se puede deshacer.</p>
+          <div className="field"><label htmlFor="delete-padron-confirm">Escribe <strong>BORRAR PADRON</strong> para confirmar</label><input id="delete-padron-confirm" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} autoComplete="off" autoFocus /></div>
+          <div className="actions"><button className="danger" disabled={busy || !deleteConfirmed} onClick={deletePadron}>{busy ? "Vaciando…" : "Vaciar padrón"}</button><button className="secondary" disabled={busy} onClick={() => setDialog("")}>Cancelar</button></div>
+        </> : <>
+          <h2 id="config-dialog-title">{dialog === "empty-padron" ? "¿Restringir con el padrón vacío?" : "¿Actualizar todos los saldos?"}</h2><p>{dialog === "empty-padron" ? "Nadie podrá registrarse como estudiante hasta que cargues un archivo al padrón." : "Esta acción modifica el saldo de completos de todos los asistentes ya registrados."}</p><div className="actions"><button onClick={confirmDialog}>{dialog === "empty-padron" ? "Sí, activar restricción" : "Sí, guardar y actualizar"}</button><button className="secondary" onClick={() => setDialog("")}>Cancelar</button></div>
+        </>}
+      </section></div>}
     </main>
   );
 }
