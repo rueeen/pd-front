@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import BracketLlave from "../components/BracketLlave";
 export default function Bracket() {
   const { slug } = useParams(),
     [d, setD] = useState(),
-    [e, setE] = useState("");
+    [e, setE] = useState(""),
+    [projectionMode, setProjectionMode] = useState(false);
   const load = useCallback(() => {
     setE("");
     api
@@ -24,12 +25,22 @@ export default function Bracket() {
       .catch((requestError) => {
         console.error("No pudimos cargar la llave.", requestError);
         setD(undefined);
-        setE("No pudimos cargar la llave.");
+        setE(apiErrorMessage(requestError, "No pudimos cargar la llave."));
       });
   }, [slug]);
   useEffect(load, [load]);
+  useEffect(() => {
+    document.body.classList.toggle("projection-mode", projectionMode);
+    if (!projectionMode) return undefined;
+
+    const refreshInterval = window.setInterval(load, 30_000);
+    return () => {
+      window.clearInterval(refreshInterval);
+      document.body.classList.remove("projection-mode");
+    };
+  }, [load, projectionMode]);
   return (
-    <main className="bracket-page">
+    <main className={`bracket-page ${projectionMode ? "is-projecting" : ""}`}>
       <header className="page-header">
         <div>
           <p className="eyebrow">Eliminación directa</p>
@@ -51,6 +62,18 @@ export default function Bracket() {
           </Link>
           <button className="secondary" onClick={load}>
             Recargar llave
+          </button>
+          <button
+            className={
+              projectionMode
+                ? "projection-toggle active"
+                : "projection-toggle secondary"
+            }
+            type="button"
+            aria-pressed={projectionMode}
+            onClick={() => setProjectionMode((active) => !active)}
+          >
+            {projectionMode ? "Salir de proyección" : "Modo proyección"}
           </button>
         </div>
       </header>

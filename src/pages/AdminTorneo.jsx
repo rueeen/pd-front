@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import BracketLlave from "../components/BracketLlave";
 
 export default function AdminTorneo() {
@@ -46,7 +46,7 @@ export default function AdminTorneo() {
       .catch((requestError) => {
         console.error("No se pudo cargar el torneo.", requestError);
         setData(undefined);
-        setError("No se pudo cargar el torneo.");
+        setError(apiErrorMessage(requestError, "No se pudo cargar el torneo."));
       });
   }, [slug]);
 

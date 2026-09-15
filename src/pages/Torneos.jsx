@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import TorneoCard from "../components/TorneoCard";
 export default function Torneos() {
   const [t, setT] = useState([]),
@@ -16,7 +16,7 @@ export default function Torneos() {
       .catch((requestError) => {
         console.error("No pudimos cargar los torneos.", requestError);
         setT([]);
-        setE("No pudimos cargar los torneos.");
+        setE(apiErrorMessage(requestError, "No pudimos cargar los torneos."));
       });
   }, []);
   return (

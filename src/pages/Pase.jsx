@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 export default function Pase() {
   const { codigo } = useParams(),
     loc = useLocation(),
     [p, setP] = useState(),
     [bad, setBad] = useState(false),
+    [loadError, setLoadError] = useState(""),
     [copied, setCopied] = useState(false),
     [editing, setEditing] = useState(null),
     [dialog, setDialog] = useState(null),
@@ -15,10 +16,18 @@ export default function Pase() {
   const load = () =>
     api
       .get(`/api/pase/${codigo}/`)
-      .then((r) => setP(r.data))
+      .then((r) => {
+        setP(r.data);
+        setBad(false);
+        setLoadError("");
+      })
       .catch((requestError) => {
         console.error("No pudimos cargar el pase.", requestError);
-        setBad(true);
+        if (requestError.response?.status === 404) setBad(true);
+        else
+          setLoadError(
+            apiErrorMessage(requestError, "No pudimos cargar el pase."),
+          );
       });
   useEffect(() => {
     load();
@@ -83,7 +92,9 @@ export default function Pase() {
   if (!p)
     return (
       <main>
-        <p>Cargando pase…</p>
+        <p className={loadError ? "error" : undefined}>
+          {loadError || "Cargando pase…"}
+        </p>
       </main>
     );
   const n = p.completos_disponibles;

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import AvisoLimitePeticiones from "./components/AvisoLimitePeticiones";
 import LimiteDeError from "./components/LimiteDeError";
 import RutaProtegida from "./components/RutaProtegida";
 import Landing from "./pages/Landing";
@@ -21,6 +22,7 @@ export default function App() {
   return (
     <>
       <Navbar />
+      <AvisoLimitePeticiones />
       <LimiteDeError>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -71,8 +73,21 @@ export default function App() {
           <Route
             path="*"
             element={
-              <main>
+              <main className="not-found">
+                <p className="eyebrow">Error 404</p>
                 <h1>Página no encontrada</h1>
+                <p className="lead">
+                  No pudimos encontrar la página que buscas. Puede que el
+                  enlace esté incompleto o haya cambiado.
+                </p>
+                <div className="actions">
+                  <Link className="button" to="/">
+                    Ir a la portada
+                  </Link>
+                  <Link className="button secondary" to="/mi-pase">
+                    Buscar mi pase
+                  </Link>
+                </div>
               </main>
             }
           />

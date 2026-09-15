@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import { formatearRut, limpiarRut } from "../utils/rut";
 
 export default function MiPase() {
@@ -24,7 +24,10 @@ export default function MiPase() {
       setError(
         requestError.response?.status === 404
           ? requestError.response.data?.detail
-          : "No pudimos recuperar tu pase. Intenta nuevamente.",
+          : apiErrorMessage(
+              requestError,
+              "No pudimos recuperar tu pase. Intenta nuevamente.",
+            ),
       );
     } finally {
       setBusy(false);

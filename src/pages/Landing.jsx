@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../api";
+import api, { apiErrorMessage } from "../api";
 import CuentaRegresiva from "../components/CuentaRegresiva";
 import Programa from "../components/Programa";
 import TorneoCard from "../components/TorneoCard";
@@ -96,7 +96,12 @@ export default function Landing() {
           requestError,
         );
         setTournaments([]);
-        setError("No pudimos cargar los torneos en este momento.");
+        setError(
+          apiErrorMessage(
+            requestError,
+            "No pudimos cargar los torneos en este momento.",
+          ),
+        );
       });
   }, []);
   const soldOut =
