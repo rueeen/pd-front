@@ -9,6 +9,8 @@ export default function AdminTorneo() {
   const [error, setError] = useState("");
   const [scores, setScores] = useState({});
   const [openMatch, setOpenMatch] = useState(null);
+  const [matchErrors, setMatchErrors] = useState({});
+  const [correctionMode, setCorrectionMode] = useState(false);
   const [onlyAccredited, setOnlyAccredited] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [capacityForm, setCapacityForm] = useState({
@@ -147,18 +149,23 @@ export default function AdminTorneo() {
 
   async function submitResult(match, payload) {
     setDialog(null);
-    setError("");
+    setMatchErrors((current) => ({ ...current, [match.id]: "" }));
     try {
-      await api.patch(`/api/admin/partidas/${match.id}/resultado/`, payload);
+      await api.patch(`/api/admin/partidas/${match.id}/resultado/`, {
+        ...payload,
+        ...(correctionMode ? { reabrir: true } : {}),
+      });
       setOpenMatch(null);
       setScores((current) => ({ ...current, [match.id]: undefined }));
       await load();
     } catch (requestError) {
       console.error("No se pudo guardar el resultado.", requestError);
-      setError(
-        requestError.response?.data?.detail ||
+      setMatchErrors((current) => ({
+        ...current,
+        [match.id]:
+          requestError.response?.data?.detail ||
           "No se pudo guardar el resultado.",
-      );
+      }));
     }
   }
 
@@ -170,7 +177,10 @@ export default function AdminTorneo() {
         <button
           className="edit-match secondary"
           type="button"
-          onClick={() => setOpenMatch(match.id)}
+          onClick={() => {
+            setMatchErrors((errors) => ({ ...errors, [match.id]: "" }));
+            setOpenMatch(match.id);
+          }}
         >
           Cargar resultado
         </button>
@@ -186,6 +196,11 @@ export default function AdminTorneo() {
           });
         }}
       >
+        {matchErrors[match.id] && (
+          <p className="match-error error" role="alert">
+            {matchErrors[match.id]}
+          </p>
+        )}
         {[
           ["a", match.equipo_a],
           ["b", match.equipo_b],
@@ -235,6 +250,8 @@ export default function AdminTorneo() {
     data?.estado === "sorteado" ||
     (data?.rondas || []).some((round) => round.partidas.length > 0);
   const state = data?.estado || "inscripcion";
+  const finished = state === "finalizado";
+  const bracketIsEditable = !finished || correctionMode;
   const acceptingRegistrations = state === "inscripcion";
   const closed = state === "cerrado";
   const stateLabels = {
@@ -252,12 +269,51 @@ export default function AdminTorneo() {
           <h1>{data?.torneo || "Administrar torneo"}</h1>
         </div>
         {data && (
-          <p className={`admin-state admin-state-${state}`}>
-            <span>Estado actual</span>
-            <strong>{stateLabels[state] || state}</strong>
-          </p>
+          <div className="admin-state-actions">
+            <p className={`admin-state admin-state-${state}`}>
+              <span>Estado actual</span>
+              <strong>{stateLabels[state] || state}</strong>
+            </p>
+            {finished && !correctionMode && (
+              <button
+                className="secondary"
+                type="button"
+                onClick={() =>
+                  setDialog({
+                    type: "correction-mode",
+                    title: "¿Corregir resultados?",
+                    text: "Corregir un resultado puede borrar los resultados de las rondas posteriores y cambiar el campeón.",
+                  })
+                }
+              >
+                Corregir resultados
+              </button>
+            )}
+          </div>
         )}
       </header>
+      {correctionMode && (
+        <aside className="correction-mode-notice" role="alert">
+          <div>
+            <strong>Modo corrección activo</strong>
+            <p>
+              Estás corrigiendo resultados de un torneo ya finalizado. Los
+              cambios pueden borrar rondas posteriores y cambiar el campeón.
+            </p>
+          </div>
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => {
+              setCorrectionMode(false);
+              setOpenMatch(null);
+              setMatchErrors({});
+            }}
+          >
+            Salir del modo corrección
+          </button>
+        </aside>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -437,8 +493,11 @@ export default function AdminTorneo() {
       </section>
 
       <section>
-        <h2>Llave editable</h2>
-        <BracketLlave rondas={data?.rondas} renderEditor={resultEditor} />
+        <h2>{bracketIsEditable ? "Llave editable" : "Llave finalizada"}</h2>
+        <BracketLlave
+          rondas={data?.rondas}
+          renderEditor={bracketIsEditable ? resultEditor : undefined}
+        />
       </section>
 
       <section>
@@ -483,6 +542,11 @@ export default function AdminTorneo() {
                       ? () => changeTournamentState("cerrar-inscripciones")
                       : dialog.type === "unpublish"
                         ? () => changeTournamentState("despublicar-llave")
+                        : dialog.type === "correction-mode"
+                          ? () => {
+                              setCorrectionMode(true);
+                              setDialog(null);
+                            }
                         : () => submitResult(dialog.match, dialog.payload)
                 }
               >
