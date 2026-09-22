@@ -65,9 +65,9 @@ export default function AdminPanel() {
       <h1>Panel del evento</h1>
       {e && <p className="error">{e}</p>}
       <div className="stats">
-        <div className="stat">
+        <Link className="stat stat-link" to="/admin/inscritos">
           <b>{d?.total_registrados ?? "—"}</b>Registrados
-        </div>
+        </Link>
         {MOSTRAR_COMPLETOS && <div className="stat">
           <b>{d?.completos_entregados ?? "—"}</b>Completos entregados
         </div>}
@@ -77,6 +77,9 @@ export default function AdminPanel() {
       </div>
       <h2>Accesos</h2>
       <div className="admin-access-grid">
+        <Link className="button" to="/admin/inscritos">
+          Ver inscritos
+        </Link>
         <Link className="button secondary" to="/admin/configuracion">
           Configuración del evento
         </Link>
