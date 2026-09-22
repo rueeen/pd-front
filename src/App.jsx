@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import MiPase from "./pages/MiPase";
 
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const AdminInscritos = lazy(() => import("./pages/AdminInscritos"));
 const AdminEscaner = lazy(() => import("./pages/AdminEscaner"));
 const AdminTorneo = lazy(() => import("./pages/AdminTorneo"));
 const AdminConfiguracion = lazy(() => import("./pages/AdminConfiguracion"));
@@ -42,6 +43,14 @@ export default function App() {
               element={
                 <Suspense fallback={<p>Cargando administración…</p>}>
                   <AdminPanel />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin/inscritos"
+              element={
+                <Suspense fallback={<p>Cargando inscritos…</p>}>
+                  <AdminInscritos />
                 </Suspense>
               }
             />

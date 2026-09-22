@@ -147,3 +147,13 @@ form { max-width:720px; } fieldset { margin:0; padding:0; border:0; } fieldset:d
 @media (prefers-reduced-motion:reduce) {
   .nav nav,.nav-toggle span,.nav-toggle span::before,.nav-toggle span::after { transition:none; }
 }
+
+/* Admin attendee directory */
+.stat-link { text-decoration:none; }
+.inscritos-filtros { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; align-items:end; margin-bottom:2rem; }
+.inscritos-filtros label { margin:0; }
+.inscritos-filtros button { width:100%; }
+.inscritos-tabla { width:100%; min-width:900px; border-collapse:collapse; }
+.inscritos-tabla th,.inscritos-tabla td { padding:.75rem; border-bottom:1px solid var(--borde); text-align:left; vertical-align:top; }
+.inscritos-tabla small { display:block; margin-top:.25rem; color:var(--texto-suave); }
+.chip,.badge-padron { display:inline-block; margin:.15rem .25rem .15rem 0; padding:.15rem .45rem; border:1px solid var(--cian); border-radius:999px; color:var(--cian); font-size:.75rem; line-height:1.35; }
