@@ -20,6 +20,24 @@ export default function AdminTorneo() {
   const [capacityError, setCapacityError] = useState("");
   const [warning, setWarning] = useState("");
   const [promoted, setPromoted] = useState([]);
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [teamForm, setTeamForm] = useState({ nombre: "", capitan_rut: "" });
+  const [teamErrors, setTeamErrors] = useState({});
+  const [replacement, setReplacement] = useState(null);
+  const [candidateQuery, setCandidateQuery] = useState("");
+  const [candidates, setCandidates] = useState([]);
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [replacementForm, setReplacementForm] = useState({
+    gamertag: "",
+    motivo: "no_se_presento",
+    detalle: "",
+    nombre_equipo: "",
+    forzar: false,
+  });
+  const [replacementError, setReplacementError] = useState("");
+  const [replacementSaving, setReplacementSaving] = useState(false);
+  const [success, setSuccess] = useState("");
 
   const load = useCallback(() => {
     setError("");
@@ -89,6 +107,121 @@ export default function AdminTorneo() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!replacement || candidateQuery.trim().length < 2) {
+      setCandidates([]);
+      setCandidateLoading(false);
+      return undefined;
+    }
+    let ignore = false;
+    setCandidateLoading(true);
+    const timer = setTimeout(() => {
+      api
+        .get(`/api/admin/torneos/${slug}/candidatos/`, {
+          params: { q: candidateQuery.trim() },
+        })
+        .then(({ data: results }) => {
+          if (!ignore) setCandidates(Array.isArray(results) ? results : []);
+        })
+        .catch((requestError) => {
+          if (!ignore) {
+            setCandidates([]);
+            setReplacementError(
+              apiErrorMessage(requestError, "No se pudieron buscar comodines."),
+            );
+          }
+        })
+        .finally(() => {
+          if (!ignore) setCandidateLoading(false);
+        });
+    }, 300);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [candidateQuery, replacement, slug]);
+
+  useEffect(() => {
+    if (!replacement && !dialog) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        if (replacementSaving) return;
+        setReplacement(null);
+        setDialog(null);
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [dialog, replacement, replacementSaving]);
+
+  function beginReplacement(team, integrante) {
+    setReplacement({ team, integrante });
+    setCandidateQuery("");
+    setCandidates([]);
+    setSelectedCandidate(null);
+    setReplacementError("");
+    setReplacementForm({
+      gamertag: "",
+      motivo: "no_se_presento",
+      detalle: "",
+      nombre_equipo: "",
+      forzar: false,
+    });
+  }
+
+  async function submitReplacement(event) {
+    event.preventDefault();
+    if (!selectedCandidate || (selectedCandidate.conflicto_bloque && !replacementForm.forzar)) return;
+    setReplacementSaving(true);
+    setReplacementError("");
+    try {
+      const payload = {
+        rut_saliente: replacement.integrante.rut,
+        rut_entrante: selectedCandidate.rut,
+        motivo: replacementForm.motivo,
+        ...(replacementForm.detalle ? { detalle: replacementForm.detalle } : {}),
+        ...(replacementForm.gamertag ? { gamertag: replacementForm.gamertag } : {}),
+        ...(data?.modalidad === "individual" && replacementForm.nombre_equipo
+          ? { nombre_equipo: replacementForm.nombre_equipo }
+          : {}),
+        ...(selectedCandidate.conflicto_bloque ? { forzar: true } : {}),
+      };
+      await api.post(`/api/admin/equipos/${replacement.team.id}/reemplazar/`, payload);
+      const teamName = replacement.team.nombre;
+      setReplacement(null);
+      await load();
+      setSuccess(`Comodín ingresado en ${teamName}`);
+      window.setTimeout(() => setSuccess(""), 4000);
+    } catch (requestError) {
+      setReplacementError(apiErrorMessage(requestError, "No se pudo realizar el reemplazo."));
+    } finally {
+      setReplacementSaving(false);
+    }
+  }
+
+  async function saveTeam(event, team) {
+    event.preventDefault();
+    const currentCaptain = (team.integrantes || []).find((member) => member.es_capitan)?.rut || team.capitan_rut || "";
+    const values = {};
+    if (teamForm.nombre.trim() !== team.nombre) values.nombre = teamForm.nombre.trim();
+    if (teamForm.capitan_rut !== currentCaptain) values.capitan_rut = teamForm.capitan_rut;
+    if (!Object.keys(values).length) {
+      setEditingTeam(null);
+      return;
+    }
+    setTeamErrors((current) => ({ ...current, [team.id]: "" }));
+    try {
+      await api.patch(`/api/admin/equipos/${team.id}/`, values);
+      setEditingTeam(null);
+      await load();
+    } catch (requestError) {
+      setTeamErrors((current) => ({
+        ...current,
+        [team.id]: apiErrorMessage(requestError, "No se pudo actualizar el equipo."),
+      }));
+    }
+  }
 
   async function patchTeam(id, values) {
     setError("");
@@ -319,6 +452,7 @@ export default function AdminTorneo() {
           {error}
         </p>
       )}
+      {success && <p className="success-notice" role="status">{success}</p>}
 
       {promoted.length > 0 && (
         <section className="promotion-notice" role="status">
@@ -371,22 +505,53 @@ export default function AdminTorneo() {
                 <h3>Integrantes</h3>
                 {(team.integrantes || []).length ? (
                   (team.integrantes || []).map((member) => (
-                    <p key={member.id || member.codigo_pase}>
+                    <div className="roster-integrante" key={member.id || member.rut || member.codigo_pase}>
                       <span>
                         {member.nombre ||
                           member.nombre_completo ||
                           "Por definir"}
+                        {member.apellido ? ` ${member.apellido}` : ""}
+                        {member.es_capitan && <small className="badge-capitan">Capitán</small>}
+                        {member.es_comodin && <small className="badge-comodin">Comodín</small>}
                       </span>
-                      <code>
-                        {member.codigo_pase ||
-                          member.pase?.codigo ||
-                          "Sin código"}
-                      </code>
-                    </p>
+                      <div className="roster-acciones">
+                        <code>{member.codigo_pase || member.pase?.codigo || "Sin código"}</code>
+                        {!finished && <button className="secondary" type="button" onClick={() => beginReplacement(team, member)}>Reemplazar</button>}
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <p>No hay integrantes informados.</p>
                 )}
+                {editingTeam === team.id ? (
+                  <form className="team-edit-form" onSubmit={(event) => saveTeam(event, team)}>
+                    <div className="field">
+                      <label htmlFor={`team-name-${team.id}`}>Nombre del equipo</label>
+                      <input id={`team-name-${team.id}`} required value={teamForm.nombre} onChange={(event) => setTeamForm({ ...teamForm, nombre: event.target.value })} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`team-captain-${team.id}`}>Capitán</label>
+                      <select id={`team-captain-${team.id}`} required value={teamForm.capitan_rut} onChange={(event) => setTeamForm({ ...teamForm, capitan_rut: event.target.value })}>
+                        {(team.integrantes || []).map((member) => <option key={member.rut} value={member.rut}>{member.nombre_completo || `${member.nombre || ""} ${member.apellido || ""}`.trim() || member.rut}</option>)}
+                      </select>
+                    </div>
+                    {teamErrors[team.id] && <p className="error" role="alert">{teamErrors[team.id]}</p>}
+                    <div className="actions"><button type="submit">Guardar</button><button className="secondary" type="button" onClick={() => setEditingTeam(null)}>Cancelar</button></div>
+                  </form>
+                ) : (
+                  <button type="button" className="secondary edit-team-button" onClick={() => {
+                    const captain = (team.integrantes || []).find((member) => member.es_capitan);
+                    setTeamForm({ nombre: team.nombre || "", capitan_rut: captain?.rut || team.capitan_rut || "" });
+                    setTeamErrors((current) => ({ ...current, [team.id]: "" }));
+                    setEditingTeam(team.id);
+                  }}>Editar equipo</button>
+                )}
+                {(team.cambios || []).length > 0 && <details className="changes-history">
+                  <summary>Cambios ({team.cambios.length})</summary>
+                  <ul>{team.cambios.map((change, index) => <li key={change.id || `${change.creado_en}-${index}`}>
+                    {new Date(change.creado_en).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })} · {change.saliente} → {change.entrante} · {change.motivo_display}{change.detalle ? ` · ${change.detalle}` : ""} · por {change.realizado_por}
+                  </li>)}</ul>
+                </details>}
                 <button
                   type="button"
                   className={team.acreditado ? "secondary" : ""}
@@ -522,6 +687,41 @@ export default function AdminTorneo() {
           </article>
         ))}
       </section>
+
+      {replacement && (
+        <div className="dialog-backdrop" role="presentation">
+          <section className="dialog replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="replacement-title">
+            <h2 id="replacement-title">Reemplazar a {replacement.integrante.nombre_completo || `${replacement.integrante.nombre || ""} ${replacement.integrante.apellido || ""}`.trim()}</h2>
+            <p><strong>{replacement.team.nombre}</strong></p>
+            <form onSubmit={submitReplacement}>
+              <div className="field">
+                <label htmlFor="candidate-search">Buscar comodín</label>
+                <input id="candidate-search" autoFocus value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setSelectedCandidate(null); setReplacementForm((current) => ({ ...current, forzar: false })); }} placeholder="Nombre, RUT o código" />
+                <small>El comodín debe estar registrado en el evento. Si no lo está, regístralo primero en /registro.</small>
+              </div>
+              {candidateLoading && <p>Buscando…</p>}
+              {candidates.length > 0 && <div className="candidatos-lista" role="listbox" aria-label="Candidatos">
+                {candidates.map((candidate) => <button key={candidate.rut} type="button" role="option" aria-selected={selectedCandidate?.rut === candidate.rut} className={`secondary candidato ${selectedCandidate?.rut === candidate.rut ? "is-selected" : ""}`} onClick={() => {
+                  setSelectedCandidate(candidate);
+                  const candidateName = `${candidate.nombre || ""} ${candidate.apellido || ""}`.trim();
+                  setReplacementForm((current) => ({ ...current, nombre_equipo: current.gamertag || candidateName, forzar: false }));
+                }}>
+                  <span>{candidate.nombre} {candidate.apellido} · {candidate.rut} · {[candidate.tipo, candidate.carrera_nombre].filter(Boolean).join(" / ") || "Sin información"}</span>
+                  {candidate.conflicto_bloque && <small className="warning">Juega {candidate.conflicto_bloque} en el mismo bloque</small>}
+                </button>)}
+              </div>}
+              <div className="field"><label htmlFor="replacement-gamertag">Gamertag (opcional)</label><input id="replacement-gamertag" value={replacementForm.gamertag} onChange={(event) => setReplacementForm({ ...replacementForm, gamertag: event.target.value, ...(data?.modalidad === "individual" ? { nombre_equipo: event.target.value || (selectedCandidate ? `${selectedCandidate.nombre} ${selectedCandidate.apellido}`.trim() : "") } : {}) })} /></div>
+              <div className="field"><label htmlFor="replacement-reason">Motivo</label><select id="replacement-reason" value={replacementForm.motivo} onChange={(event) => setReplacementForm({ ...replacementForm, motivo: event.target.value })}><option value="no_se_presento">No se presentó</option><option value="problema">Problema en el momento</option><option value="otro">Otro</option></select></div>
+              <div className="field"><label htmlFor="replacement-detail">Detalle (opcional)</label><textarea id="replacement-detail" maxLength="200" value={replacementForm.detalle} onChange={(event) => setReplacementForm({ ...replacementForm, detalle: event.target.value })} /></div>
+              {data?.modalidad === "individual" && <div className="field"><label htmlFor="replacement-bracket-name">Nombre en la llave</label><input id="replacement-bracket-name" required value={replacementForm.nombre_equipo} onChange={(event) => setReplacementForm({ ...replacementForm, nombre_equipo: event.target.value })} /></div>}
+              {selectedCandidate?.conflicto_bloque && <label className="checkbox warning"><input type="checkbox" checked={replacementForm.forzar} onChange={(event) => setReplacementForm({ ...replacementForm, forzar: event.target.checked })} /> Confirmo que no jugará en {selectedCandidate.conflicto_bloque}</label>}
+              {replacement.integrante.es_capitan && <p className="info-notice">El comodín quedará como capitán.</p>}
+              {replacementError && <p className="error" role="alert">{replacementError}</p>}
+              <div className="actions"><button type="submit" disabled={!selectedCandidate || replacementSaving || (selectedCandidate.conflicto_bloque && !replacementForm.forzar)}>{replacementSaving ? "Guardando…" : "Confirmar reemplazo"}</button><button className="secondary" type="button" disabled={replacementSaving} onClick={() => setReplacement(null)}>Cancelar</button></div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {dialog && (
         <div className="dialog-backdrop" role="presentation">
