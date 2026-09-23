@@ -505,7 +505,7 @@ export default function AdminTorneo() {
                 <h3>Integrantes</h3>
                 {(team.integrantes || []).length ? (
                   (team.integrantes || []).map((member) => (
-                    <div className="roster-integrante" key={member.id || member.rut || member.codigo_pase}>
+                    <div className="roster-integrante" key={member.rut || member.codigo}>
                       <span>
                         {member.nombre ||
                           member.nombre_completo ||
@@ -515,7 +515,7 @@ export default function AdminTorneo() {
                         {member.es_comodin && <small className="badge-comodin">Comodín</small>}
                       </span>
                       <div className="roster-acciones">
-                        <code>{member.codigo_pase || member.pase?.codigo || "Sin código"}</code>
+                        <code>{member.codigo || "Sin código"}</code>
                         {!finished && <button className="secondary" type="button" onClick={() => beginReplacement(team, member)}>Reemplazar</button>}
                       </div>
                     </div>
@@ -549,7 +549,8 @@ export default function AdminTorneo() {
                 {(team.cambios || []).length > 0 && <details className="changes-history">
                   <summary>Cambios ({team.cambios.length})</summary>
                   <ul>{team.cambios.map((change, index) => <li key={change.id || `${change.creado_en}-${index}`}>
-                    {new Date(change.creado_en).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })} · {change.saliente} → {change.entrante} · {change.motivo_display}{change.detalle ? ` · ${change.detalle}` : ""} · por {change.realizado_por}
+                    {new Date(change.creado_en).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })} · {change.saliente} → {change.entrante} · {change.motivo_display}{change.detalle ? ` · ${change.detalle}` : ""} · por {change.origen === "capitan" ? "capitán" : change.realizado_por || "admin"}
+                    {change.origen === "capitan" && <small className="badge-capitan">Capitán</small>}
                   </li>)}</ul>
                 </details>}
                 <button
