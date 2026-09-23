@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import api, { apiErrorMessage } from "../api";
 import { MOSTRAR_COMPLETOS } from "../config/visibilidad";
+import { formatearRut, limpiarRut, rutValido } from "../utils/rut";
 export default function Pase() {
   const { codigo } = useParams(),
     loc = useLocation(),
@@ -12,7 +13,9 @@ export default function Pase() {
     [copied, setCopied] = useState(false),
     [editing, setEditing] = useState(null),
     [dialog, setDialog] = useState(null),
-    [operationError, setOperationError] = useState(""),
+    [operationError, setOperationError] = useState(null),
+    [operationSuccess, setOperationSuccess] = useState(null),
+    [processing, setProcessing] = useState(false),
     ref = useRef();
   const load = () =>
     api
@@ -59,22 +62,82 @@ export default function Pase() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }
-  async function manage(slug, path, payload = {}) {
-    setOperationError("");
+  const teamKey = (t) => t.equipo_id || t.slug;
+  const failOperation = (t, requestError) => {
+    console.error("No pudimos modificar el equipo.", requestError);
+    setOperationError({
+      key: teamKey(t),
+      message: apiErrorMessage(
+        requestError,
+        "No pudimos modificar el equipo.",
+      ),
+    });
+  };
+  async function renombrarEquipo(t, nombre) {
+    setOperationError(null);
+    setProcessing(true);
     try {
-      await api.patch(`/api/torneos/${slug}/equipo/${path}/`, {
-        ...payload,
+      await api.patch(`/api/equipos/${t.equipo_id}/`, {
         codigo_capitan: codigo,
+        nombre_equipo: nombre,
       });
       setEditing(null);
+      await load();
+    } catch (requestError) {
+      failOperation(t, requestError);
+    } finally {
+      setProcessing(false);
+    }
+  }
+  async function retirarEquipo(t) {
+    setOperationError(null);
+    setProcessing(true);
+    try {
+      await api.delete(`/api/equipos/${t.equipo_id}/`, {
+        data: { codigo_capitan: codigo },
+      });
       setDialog(null);
       await load();
     } catch (requestError) {
-      console.error("No pudimos modificar el equipo.", requestError);
-      setOperationError(
-        requestError.response?.data?.detail ||
-          "No pudimos modificar el equipo.",
+      failOperation(t, requestError);
+      setDialog(null);
+    } finally {
+      setProcessing(false);
+    }
+  }
+  async function reemplazarIntegrante(t, payload) {
+    setOperationError(null);
+    setProcessing(true);
+    try {
+      const response = await api.post(
+        `/api/equipos/${t.equipo_id}/integrantes/`,
+        { ...payload, codigo_capitan: codigo },
       );
+      const entrant =
+        response.data?.integrante || response.data?.comodin || response.data || {};
+      const nombre =
+        [entrant.nombre, entrant.apellido].filter(Boolean).join(" ") ||
+        entrant.gamertag ||
+        payload.gamertag ||
+        "el comodín";
+      const success = {
+        key: teamKey(t),
+        message: `Listo, ${nombre} entró como comodín.`,
+      };
+      setEditing(null);
+      setOperationSuccess(success);
+      setTimeout(
+        () =>
+          setOperationSuccess((current) =>
+            current === success ? null : current,
+          ),
+        4000,
+      );
+      await load();
+    } catch (requestError) {
+      failOperation(t, requestError);
+    } finally {
+      setProcessing(false);
     }
   }
   if (bad)
@@ -100,7 +163,7 @@ export default function Pase() {
     );
   const n = p.completos_disponibles;
   const activeTournaments = (p.torneos || []).filter(
-    (t) => !["retirado", "cancelado"].includes(t.estado),
+    (t) => !["retirado", "cancelado"].includes(t.torneo_estado),
   );
   const blockKey = (t) =>
     t.bloque_id || t.bloque_horario_id ||
@@ -159,14 +222,12 @@ export default function Pase() {
         {p.torneos?.length > 0 && (
           <section className="pass-tournaments">
             <h2>Tus torneos</h2>
-            {operationError && (
-              <p className="error" role="alert">
-                {operationError}
-              </p>
-            )}
             <div className="pass-tournament-list">
               {p.torneos.map((t, i) => (
-                <article className="card pass-tournament" key={t.slug || i}>
+                <article
+                  className="card pass-tournament"
+                  key={t.equipo_id || t.slug || i}
+                >
                   <h3>{t.nombre || t.torneo}</h3>
                   <p>
                     <span className="data-label">Bloque horario</span>{" "}
@@ -174,16 +235,18 @@ export default function Pase() {
                   </p>
                   <p>
                     <span className="data-label">Equipo</span>{" "}
-                    {t.nombre_equipo || t.equipo?.nombre}
+                    {typeof t.equipo === "string"
+                      ? t.equipo
+                      : t.equipo?.nombre}
                   </p>
                   <p
-                    className={`team-status ${t.estado === "confirmado" ? "confirmed" : ""}`}
+                    className={`team-status ${t.torneo_estado === "confirmado" ? "confirmed" : ""}`}
                   >
-                    {t.estado === "espera"
+                    {t.torneo_estado === "espera"
                       ? `Lista de espera · posición ${t.posicion_espera}`
-                      : t.estado === "confirmado"
+                      : t.torneo_estado === "confirmado"
                         ? "✓ Confirmado"
-                        : t.estado}
+                        : t.torneo_estado}
                   </p>
                   {(t.conflicto_bloque || repeatedBlocks.has(blockKey(t))) && (
                     <p className="warning block-conflict" role="alert">
@@ -196,8 +259,9 @@ export default function Pase() {
                       (member, index) => (
                         <li key={member.id || index}>
                           <span>
-                            {member.nombre_completo ||
-                              member.nombre ||
+                            {[member.nombre, member.apellido]
+                              .filter(Boolean)
+                              .join(" ") ||
                               `Integrante ${index + 1}`}
                           </span>
                           <strong>{member.gamertag}</strong>
@@ -206,63 +270,97 @@ export default function Pase() {
                     )}
                   </ul>
                   <Link to={`/torneos/${t.slug}/llave`}>Ver llave pública</Link>
-                  {t.es_capitan && (t.sorteado || t.llave_sorteada) && (
-                    <p className="notice">
-                      La llave ya se sorteó. Cualquier cambio debe verse con el
-                      coordinador.
+                  {operationError?.key === teamKey(t) && (
+                    <p className="error" role="alert">
+                      {operationError.message}
+                    </p>
+                  )}
+                  {operationSuccess?.key === teamKey(t) && (
+                    <p className="success" role="status">
+                      {operationSuccess.message}
                     </p>
                   )}
                   {t.es_capitan &&
-                    t.inscripciones_abiertas &&
-                    !(t.sorteado || t.llave_sorteada) && (
+                    !t.puede_reemplazar &&
+                    t.motivo_no_reemplazo && (
+                      <p className="notice">
+                        {t.motivo_no_reemplazo}
+                        {String(t.modalidad).toLowerCase() === "individual" &&
+                          " Habla con el coordinador del torneo."}
+                      </p>
+                    )}
+                  {t.es_capitan &&
+                    (t.puede_gestionar || t.puede_reemplazar) && (
                       <div className="team-management">
-                        <button
-                          className="secondary"
-                          type="button"
-                          onClick={() =>
-                            setEditing({
-                              type: "name",
-                              slug: t.slug,
-                              value: t.nombre_equipo || t.equipo?.nombre || "",
-                            })
-                          }
-                        >
-                          Cambiar nombre
-                        </button>
-                        <button
-                          className="secondary"
-                          type="button"
-                          onClick={() =>
-                            setEditing({
-                              type: "member",
-                              slug: t.slug,
-                              integrantes:
-                                t.integrantes || t.equipo?.integrantes || [],
-                              anterior: "",
-                              rut: "",
-                              gamertag: "",
-                            })
-                          }
-                        >
-                          Reemplazar integrante
-                        </button>
-                        <button
-                          className="secondary danger"
-                          type="button"
-                          onClick={() => setDialog(t)}
-                        >
-                          Retirar equipo
-                        </button>
+                        {t.puede_gestionar && (
+                          <button
+                            className="secondary"
+                            type="button"
+                            onClick={() =>
+                              setEditing({
+                                type: "name",
+                                key: teamKey(t),
+                                value:
+                                  typeof t.equipo === "string"
+                                    ? t.equipo
+                                    : t.equipo?.nombre || "",
+                              })
+                            }
+                          >
+                            Cambiar nombre
+                          </button>
+                        )}
+                        {t.puede_reemplazar && (
+                          <div>
+                            <button
+                              className={
+                                t.inscripciones_abiertas
+                                  ? "secondary"
+                                  : undefined
+                              }
+                              type="button"
+                              onClick={() =>
+                                setEditing({
+                                  type: "member",
+                                  key: teamKey(t),
+                                  anterior: "",
+                                  rut: "",
+                                  codigoEntrante: "",
+                                  gamertag: "",
+                                  motivo: "no_se_presento",
+                                  detalle: "",
+                                  confirmado: false,
+                                })
+                              }
+                            >
+                              {t.inscripciones_abiertas
+                                ? "Reemplazar integrante"
+                                : "Ingresar comodín"}
+                            </button>
+                            {!t.inscripciones_abiertas && (
+                              <small>
+                                Te quedan {t.comodines_restantes} comodines
+                              </small>
+                            )}
+                          </div>
+                        )}
+                        {t.puede_gestionar && (
+                          <button
+                            className="secondary danger"
+                            type="button"
+                            onClick={() => setDialog(t)}
+                          >
+                            Retirar equipo
+                          </button>
+                        )}
                       </div>
                     )}
-                  {editing?.slug === t.slug && editing.type === "name" && (
+                  {editing?.key === teamKey(t) && editing.type === "name" && (
                     <form
                       className="inline-management"
                       onSubmit={(event) => {
                         event.preventDefault();
-                        manage(t.slug, "nombre", {
-                          nombre_equipo: editing.value,
-                        });
+                        renombrarEquipo(t, editing.value);
                       }}
                     >
                       <label>
@@ -278,23 +376,26 @@ export default function Pase() {
                           required
                         />
                       </label>
-                      <button>Guardar nombre</button>
+                      <button disabled={processing}>Guardar nombre</button>
                     </form>
                   )}
-                  {editing?.slug === t.slug && editing.type === "member" && (
+                  {editing?.key === teamKey(t) && editing.type === "member" && (
                     <form
                       className="inline-management"
                       onSubmit={(event) => {
                         event.preventDefault();
-                        manage(t.slug, "integrante", {
+                        reemplazarIntegrante(t, {
                           integrante_id: editing.anterior,
-                          rut: editing.rut,
+                          rut_entrante: limpiarRut(editing.rut),
+                          codigo_entrante: editing.codigoEntrante,
                           gamertag: editing.gamertag,
+                          motivo: editing.motivo,
+                          detalle: editing.motivo === "otro" ? editing.detalle : "",
                         });
                       }}
                     >
                       <label>
-                        Integrante a reemplazar
+                        Quién no llegó
                         <select
                           value={editing.anterior}
                           onChange={(event) =>
@@ -306,25 +407,55 @@ export default function Pase() {
                           required
                         >
                           <option value="">Selecciona</option>
-                          {editing.integrantes
+                          {(t.integrantes || [])
                             .filter((member) => !member.es_capitan)
                             .map((member) => (
                               <option key={member.id} value={member.id}>
-                                {member.gamertag}
+                                {[member.nombre, member.apellido].filter(Boolean).join(" ")}
+                                {member.gamertag ? ` (${member.gamertag})` : ""}
                               </option>
                             ))}
                         </select>
                       </label>
                       <label>
-                        RUT del reemplazo
+                        RUT del comodín
                         <input
                           value={editing.rut}
                           onChange={(event) =>
-                            setEditing({ ...editing, rut: event.target.value })
+                            setEditing({
+                              ...editing,
+                              rut: formatearRut(event.target.value),
+                            })
                           }
                           required
                         />
+                        {editing.rut && !rutValido(editing.rut) && (
+                          <small className="error">Ingresa un RUT válido.</small>
+                        )}
                       </label>
+                      {!t.inscripciones_abiertas && (
+                        <label>
+                          Código del pase del comodín
+                          <input
+                            value={editing.codigoEntrante}
+                            onChange={(event) =>
+                              setEditing({
+                                ...editing,
+                                codigoEntrante: event.target.value
+                                  .toUpperCase()
+                                  .slice(0, 10),
+                              })
+                            }
+                            minLength={10}
+                            maxLength={10}
+                            required
+                          />
+                          <small>
+                            Pídele a tu comodín el código que aparece bajo su QR.
+                            Debe estar registrado en el evento.
+                          </small>
+                        </label>
+                      )}
                       <label>
                         Gamertag
                         <input
@@ -335,10 +466,64 @@ export default function Pase() {
                               gamertag: event.target.value,
                             })
                           }
-                          required
                         />
                       </label>
-                      <button>Guardar integrante</button>
+                      <label>
+                        Motivo
+                        <select
+                          value={editing.motivo}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              motivo: event.target.value,
+                            })
+                          }
+                        >
+                          <option value="no_se_presento">No se presentó</option>
+                          <option value="problema">Problema en el momento</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </label>
+                      {editing.motivo === "otro" && (
+                        <label>
+                          Detalle
+                          <input
+                            value={editing.detalle}
+                            onChange={(event) =>
+                              setEditing({
+                                ...editing,
+                                detalle: event.target.value,
+                              })
+                            }
+                            required
+                          />
+                        </label>
+                      )}
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={editing.confirmado}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              confirmado: event.target.checked,
+                            })
+                          }
+                        />
+                        Confirmo el cambio. Queda registrado y lo ve el
+                        coordinador.
+                      </label>
+                      <button
+                        disabled={
+                          processing ||
+                          !editing.confirmado ||
+                          !rutValido(editing.rut)
+                        }
+                      >
+                        {t.inscripciones_abiertas
+                          ? "Guardar integrante"
+                          : "Ingresar comodín"}
+                      </button>
                     </form>
                   )}
                 </article>
@@ -363,11 +548,16 @@ export default function Pase() {
             <div className="actions">
               <button
                 className="danger"
-                onClick={() => manage(dialog.slug, "retirar")}
+                disabled={processing}
+                onClick={() => retirarEquipo(dialog)}
               >
                 Sí, retirar equipo
               </button>
-              <button className="secondary" onClick={() => setDialog(null)}>
+              <button
+                className="secondary"
+                disabled={processing}
+                onClick={() => setDialog(null)}
+              >
                 Cancelar
               </button>
             </div>
