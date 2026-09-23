@@ -163,7 +163,7 @@ export default function Pase() {
     );
   const n = p.completos_disponibles;
   const activeTournaments = (p.torneos || []).filter(
-    (t) => !["retirado", "cancelado"].includes(t.torneo_estado),
+    (t) => t.estado_equipo !== "retirado",
   );
   const blockKey = (t) =>
     t.bloque_id || t.bloque_horario_id ||
@@ -219,11 +219,11 @@ export default function Pase() {
           Este link es permanente. Guárdalo para abrir tu pase desde cualquier
           dispositivo.
         </p>
-        {p.torneos?.length > 0 && (
+        {activeTournaments.length > 0 && (
           <section className="pass-tournaments">
             <h2>Tus torneos</h2>
             <div className="pass-tournament-list">
-              {p.torneos.map((t, i) => (
+              {activeTournaments.map((t, i) => (
                 <article
                   className="card pass-tournament"
                   key={t.equipo_id || t.slug || i}
@@ -240,13 +240,15 @@ export default function Pase() {
                       : t.equipo?.nombre}
                   </p>
                   <p
-                    className={`team-status ${t.torneo_estado === "confirmado" ? "confirmed" : ""}`}
+                    className={`team-status ${t.estado_equipo === "confirmado" ? "confirmed" : ""}`}
                   >
-                    {t.torneo_estado === "espera"
+                    {t.estado_equipo === "espera"
                       ? `Lista de espera · posición ${t.posicion_espera}`
-                      : t.torneo_estado === "confirmado"
+                      : t.estado_equipo === "confirmado"
                         ? "✓ Confirmado"
-                        : t.torneo_estado}
+                        : t.estado_equipo === "retirado"
+                          ? "Equipo retirado"
+                          : t.estado_equipo}
                   </p>
                   {(t.conflicto_bloque || repeatedBlocks.has(blockKey(t))) && (
                     <p className="warning block-conflict" role="alert">
@@ -337,9 +339,12 @@ export default function Pase() {
                                 ? "Reemplazar integrante"
                                 : "Ingresar comodín"}
                             </button>
-                            {!t.inscripciones_abiertas && (
+                            {!t.inscripciones_abiertas &&
+                              t.comodines_restantes != null && (
                               <small>
-                                Te quedan {t.comodines_restantes} comodines
+                                {t.comodines_restantes === 1
+                                  ? "Te queda 1 comodín"
+                                  : `Te quedan ${t.comodines_restantes} comodines`}
                               </small>
                             )}
                           </div>
